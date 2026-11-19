@@ -1,0 +1,1141 @@
+<!-- planner.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Secure Workload Scope Planner</title>
+<style>
+  :root { --ink:#1b1f24; --muted:#5a6470; --line:#d5dae0; --bg:#f5f7f9; --card:#ffffff; --accent:#0b5cad; --bad:#b3261e; --warn:#8a5a00; --ok:#1b6e3c; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color:var(--ink); background:var(--bg); }
+  header, main { max-width:960px; margin:0 auto; padding:16px; }
+  h1 { font-size:1.5rem; margin:8px 0; }
+  h2 { font-size:1.2rem; margin:22px 0 6px; border-bottom:1px solid var(--line); padding-bottom:4px; }
+  p { margin:6px 0; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin:14px 0; }
+  .note { background:#e8f1fb; border:1px solid #b9d3ee; border-radius:8px; padding:10px 12px; }
+  .hint { color:var(--muted); font-size:.9rem; }
+  label.t { display:block; font-weight:600; margin-top:10px; }
+  button { font:inherit; padding:9px 14px; border-radius:6px; border:1px solid var(--accent); background:#fff; color:var(--accent); cursor:pointer; }
+  button.primary { background:var(--accent); color:#fff; }
+  button:disabled { opacity:.5; cursor:default; }
+  select { font:inherit; padding:8px; }
+  .anchor-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:6px 0; }
+  .anchor-row .lvl { flex:0 0 130px; font-weight:600; }
+  .anchor-row .why { color:var(--muted); font-size:.9rem; }
+  .names { display:flex; flex-wrap:wrap; gap:10px; }
+  .names label { flex:1 1 180px; font-size:.9rem; color:var(--muted); }
+  .names input { display:block; width:100%; font:inherit; padding:7px 9px; border:1px solid var(--line); border-radius:6px; }
+  .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
+  table { border-collapse:collapse; width:100%; margin:8px 0; font-size:.95rem; }
+  th, td { border:1px solid var(--line); padding:6px 8px; text-align:left; vertical-align:top; }
+  th { background:#eef1f4; }
+  .tablewrap { overflow-x:auto; }
+  ul.tree, ul.tree ul { list-style:none; margin:0; padding-left:20px; border-left:1px solid var(--line); }
+  ul.tree { border-left:0; padding-left:0; }
+  ul.tree li { margin:3px 0; }
+  .tag { font-size:.75rem; border-radius:10px; padding:1px 8px; margin-left:6px; border:1px solid var(--line); color:var(--muted); white-space:nowrap; }
+  .tag.new { color:var(--ok); border-color:var(--ok); }
+  .tag.conflict { color:var(--bad); border-color:var(--bad); }
+  .blocker { color:var(--bad); font-weight:600; }
+  .review { color:var(--warn); font-weight:600; }
+  .later { color:var(--accent); font-weight:600; }
+  .pass { color:var(--ok); font-weight:600; }
+  #verdict { font-size:1.1rem; font-weight:700; }
+  #msg { color:var(--bad); font-weight:600; }
+  [hidden] { display:none !important; }
+  @media print {
+    body { background:#fff; }
+    #inputs, .actions, header .note { display:none !important; }
+    .card { border:0; padding:0; }
+    h2 { break-after:avoid; }
+    tr { break-inside:avoid; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Secure Workload Scope Planner</h1>
+  <p class="hint">CSW Scope Builder version 1.2</p>
+  <p class="note">Files you choose here are read by this browser only. Nothing is uploaded.</p>
+</header>
+<main>
+  <div class="card" id="inputs">
+    <label class="t" for="f-answers">Customer answers file (required)</label>
+    <p class="hint">The file the customer saved from the questionnaire, ending in "CSW Scope Answers.json".</p>
+    <input type="file" id="f-answers" accept=".json,application/json">
+    <label class="t" for="f-existing">Existing scope list (only for a tenant that already has scopes)</label>
+    <p class="hint">The file the customer saved with the read-only export program.</p>
+    <input type="file" id="f-existing" accept=".json,application/json">
+    <div id="root-pick" hidden>
+      <label class="t" for="root-sel">Build under this scope</label>
+      <p class="hint">New scopes are added below the scope you choose. Nothing above or beside it is touched.</p>
+      <select id="root-sel"></select>
+    </div>
+    <div id="anchor-box" hidden>
+      <label class="t">What The Parent Scope Stands For</label>
+      <p class="hint">An existing scope often already stands for a level of the tree, for example Environment = Production. Confirm each proposal or set it yourself. A level that is set here is not built again below the parent, and only the applications that belong to it are planned.</p>
+      <div id="anchor-rows"></div>
+    </div>
+    <div id="label-names">
+      <label class="t">Label names</label>
+      <p class="hint">The plan labels each workload with these four names. Change one when the tenant already uses that name for something else. Use the same names in every round for the same customer.</p>
+      <div class="names">
+        <label>Environment <input type="text" id="ln-Environment" value="Environment"></label>
+        <label>Application <input type="text" id="ln-Application" value="Application"></label>
+        <label>Site or cloud <input type="text" id="ln-Location" value="Location"></label>
+        <label>Regulated zone <input type="text" id="ln-Zone" value="Zone"></label>
+      </div>
+    </div>
+    <p id="msg" role="alert" hidden></p>
+    <div class="actions">
+      <button type="button" id="b-labels" disabled>Download Label File</button>
+      <button type="button" id="b-plan" disabled>Download Plan File</button>
+      <button type="button" id="b-print" class="primary" disabled>Print Or Save As PDF</button>
+    </div>
+  </div>
+  <div class="card" id="report" hidden></div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  var TOOL_VERSION = '1.2';
+  var PLAN_SCHEMA = 'csw-scope-plan';
+  var PLAN_SCHEMA_VERSION = 3;
+  var ANSWERS_SCHEMA = 'csw-scope-interview';
+  var ANSWERS_MAX_VERSION = 4;
+  var EXPORT_SCHEMA = 'csw-scope-export';
+  var EXPORT_MAX_VERSION = 2;
+  var DEPENDENT_KINDS = [['workspaces', 'workspace', 'workspaces'], ['inventory_filters', 'inventory filter', 'inventory filters'], ['roles', 'role', 'roles']];
+
+  var LIMITS = {
+    scopesPerTenant: 1000,
+    childrenPerParent: 999,
+    depthBelowRoot: 4,
+    saasIpsPerLicense: 60,
+    saasSubnetsPerLicense: 1.2,
+    labelColumns: 32
+  };
+  var REFS = {
+    principles: 'https://securitydocs.cisco.com/docs/csw/3-10/user/91653.dita',
+    limits39: 'https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/3_9/cisco-secure-workload-user-guide-on-prem-v39/configuration-limits-in-secure-workload.html',
+    datasheet: 'https://www.cisco.com/c/en/us/products/collateral/data-center-analytics/tetration-analytics/cisco-secure-workload-dsv3a.html',
+    labelLimits: 'https://securitydocs.cisco.com/docs/csw/3-10/user/91705.dita',
+    labelFile: 'https://securitydocs.cisco.com/docs/csw/3-10/user/91685.dita',
+    labelSchema: 'https://securitydocs.cisco.com/docs/csw/3-10/user/91627.dita',
+    labelApi: 'https://securitydocs.cisco.com/docs/csw/3-10/user/92071.dita',
+    commit: 'https://securitydocs.cisco.com/docs/csw/3-10/user/91587.dita',
+    process: 'https://securitydocs.cisco.com/docs/csw/3-10/user/92156.dita'
+  };
+  var SHARED = 'Shared';
+  var UNREGULATED = 'Unregulated';
+  var LABEL_KEYS = ['Environment', 'Application', 'Location', 'Zone'];
+  var LEVELS = ['Environment', 'Location', 'Zone', 'Application'];
+  var LEVEL_WORDS = { Environment: 'Environment', Location: 'Site or cloud', Zone: 'Regulated zone', Application: 'Application' };
+  var WINDOWS_RESERVED = ['CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'];
+  var RESERVED_PREFIXES = ['orchestrator_', 'TA_', 'ISE_', 'SNOW_', 'LDAP_', 'user_'];
+
+  /* ---------- helpers ---------- */
+  function trim(s) { return String(s == null ? '' : s).trim(); }
+  function lc(s) { return trim(s).toLowerCase(); }
+  function arr(x) { return Array.isArray(x) ? x : []; }
+  function dotted(n) { return [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join('.'); }
+  function tokens(s) { return trim(s).split(/[\s,;]+/).filter(Boolean); }
+
+  function parseToken(t) {
+    var m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})(?:\/(\d{1,2}))?$/.exec(t);
+    if (m) {
+      for (var i = 1; i <= 4; i++) { if (Number(m[i]) > 255) { return null; } }
+      var bits = m[5] === undefined ? 32 : Number(m[5]);
+      if (bits > 32) { return null; }
+      var ip = ((Number(m[1]) * 16777216) + (Number(m[2]) * 65536) + (Number(m[3]) * 256) + Number(m[4])) >>> 0;
+      var mask = bits === 0 ? 0 : (0xFFFFFFFF << (32 - bits)) >>> 0;
+      var net = (ip & mask) >>> 0;
+      var size = Math.pow(2, 32 - bits);
+      return { v: 4, text: t, hasSlash: m[5] !== undefined, start: net, end: net + size - 1, aligned: net === ip, fixed: dotted(net) + '/' + bits, key: net + '/' + bits };
+    }
+    if (t.indexOf(':') >= 0 && /^[0-9a-fA-F:.]+(\/\d{1,3})?$/.test(t)) {
+      return { v: 6, text: t, hasSlash: t.indexOf('/') >= 0, aligned: true, key: t.toLowerCase() };
+    }
+    return null;
+  }
+
+  /* ---------- rules shared with the helper (tests/rules.json checks both) ---------- */
+  function asQuery(v) {
+    if (typeof v === 'string') { try { return JSON.parse(v); } catch (e) { return v; } }
+    return v;
+  }
+  function deepEqual(a, b) {
+    if (a === b) { return true; }
+    if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') { return false; }
+    if (Array.isArray(a) !== Array.isArray(b)) { return false; }
+    var ka = Object.keys(a), kb = Object.keys(b);
+    if (ka.length !== kb.length) { return false; }
+    return ka.every(function (k) { return Object.prototype.hasOwnProperty.call(b, k) && deepEqual(a[k], b[k]); });
+  }
+  /* One fixed text form of a query: compact JSON with the keys in order. The helper writes the same text. */
+  function canonical(v) {
+    if (Array.isArray(v)) { return '[' + v.map(canonical).join(',') + ']'; }
+    if (v && typeof v === 'object') { return '{' + Object.keys(v).sort().map(function (k) { return JSON.stringify(k) + ':' + canonical(v[k]); }).join(',') + '}'; }
+    return JSON.stringify(v === undefined ? null : v);
+  }
+  function keysAre(q, list) { return Object.keys(q).sort().join(',') === list; }
+  /* The form two queries are compared in. JSON text is read into a structure. The members of "and" and "or" are sorted,
+     and an "and" or "or" with one member is replaced by that member. In a "label equals value" condition on an uploaded
+     label (a field that starts with user_), capital letters in the label name and the value are ignored, because Secure
+     Workload label keys and values are not case sensitive. Anything not known is kept exactly as it is. */
+  function comparable(q) {
+    q = asQuery(q);
+    if (!q || typeof q !== 'object' || Array.isArray(q)) { return q; }
+    if ((q.type === 'and' || q.type === 'or') && keysAre(q, 'filters,type') && Array.isArray(q.filters)) {
+      var members = q.filters.map(comparable);
+      if (members.length === 1) { return members[0]; }
+      var keyed = members.map(function (m) { return [canonical(m), m]; });
+      keyed.sort(function (x, y) { return x[0] < y[0] ? -1 : (x[0] > y[0] ? 1 : 0); });
+      return { type: q.type, filters: keyed.map(function (x) { return x[1]; }) };
+    }
+    if (q.type === 'not' && keysAre(q, 'filter,type')) { return { type: 'not', filter: comparable(q.filter) }; }
+    if (q.type === 'eq' && keysAre(q, 'field,type,value') && typeof q.field === 'string' && q.field.toLowerCase().indexOf('user_') === 0) {
+      return { type: 'eq', field: q.field.toLowerCase(), value: String(q.value).toLowerCase() };
+    }
+    return q;
+  }
+  /* The comparison rule, shared with the helper. Returns [same, exact]. exact is true only when the two are identical as
+     written. same is true when they are equivalent under the rule in comparable(). */
+  function sameQuery(a, b) {
+    a = asQuery(a); b = asQuery(b);
+    if (deepEqual(a, b)) { return [true, true]; }
+    if (!a || !b || typeof a !== 'object' || typeof b !== 'object' || Array.isArray(a) || Array.isArray(b)) { return [false, false]; }
+    return [canonical(comparable(a)) === canonical(comparable(b)), false];
+  }
+  function fieldWords(field) {
+    field = String(field);
+    if (field.toLowerCase().indexOf('user_') === 0) { return field.slice(5); }
+    return ({ ip: 'address', os: 'operating system', vrf_id: 'VRF ID' })[field] || field;
+  }
+  /* One plain-English line for a query. The helper writes the same line. */
+  function describeQuery(query) {
+    query = asQuery(query);
+    function valueWords(v) { return typeof v === 'string' ? v : canonical(v); }
+    var words = { eq: 'is', ne: 'is not', lt: 'is less than', lte: 'is at most', gt: 'is greater than', gte: 'is at least', regex: 'matches the pattern', contains: 'contains', subnet: 'is in' };
+    function walk(q, nested) {
+      if (!q || typeof q !== 'object' || Array.isArray(q)) { return null; }
+      if ((q.type === 'and' || q.type === 'or') && keysAre(q, 'filters,type') && Array.isArray(q.filters) && q.filters.length) {
+        var parts = q.filters.map(function (m) { return walk(m, true); });
+        if (parts.some(function (x) { return x === null; })) { return null; }
+        var text = parts.join(' ' + q.type + ' ');
+        return nested && parts.length > 1 ? '(' + text + ')' : text;
+      }
+      if (q.type === 'not' && keysAre(q, 'filter,type')) { var inner = walk(q.filter, false); return inner === null ? null : 'not (' + inner + ')'; }
+      if ((q.type === 'in' || q.type === 'range') && keysAre(q, 'field,type,values') && Array.isArray(q.values)) {
+        var values = q.values.map(valueWords);
+        if (q.type === 'range') { return values.length !== 2 ? null : fieldWords(q.field) + ' is between ' + values[0] + ' and ' + values[1]; }
+        return fieldWords(q.field) + ' is one of ' + values.join(', ');
+      }
+      if (Object.prototype.hasOwnProperty.call(words, q.type) && keysAre(q, 'field,type,value')) { return fieldWords(q.field) + ' ' + words[q.type] + ' ' + valueWords(q.value); }
+      return null;
+    }
+    var out = walk(query, false);
+    if (out === null) { return typeof query === 'string' ? query : canonical(query); }
+    return out;
+  }
+  /* Scope short names. Returns [same, exact]. Names that differ only in capital letters are one scope. */
+  function sameName(a, b) {
+    a = String(a == null ? '' : a); b = String(b == null ? '' : b);
+    return [a.toLowerCase() === b.toLowerCase(), a === b];
+  }
+  /* A file-name-safe version of a name, valid on Windows, macOS, and Linux. */
+  function safeName(text) {
+    var name = String(text == null ? '' : text).replace(/[\\/:*?"<>|\u0000-\u001f]/g, '').trim().replace(/[. ]+$/, '');
+    if (!name) { return 'Tenant'; }
+    if (WINDOWS_RESERVED.indexOf(name.split('.')[0].toUpperCase()) >= 0) { return name + ' scope'; }
+    return name;
+  }
+  function sha256Hex(text) {
+    var K = [], H = [], n, i, j, isPrime;
+    for (n = 2, i = 0; i < 64; n++) {
+      isPrime = true;
+      for (j = 2; j * j <= n; j++) { if (n % j === 0) { isPrime = false; break; } }
+      if (isPrime) {
+        if (i < 8) { H[i] = (Math.pow(n, 1 / 2) % 1 * 4294967296) | 0; }
+        K[i++] = (Math.pow(n, 1 / 3) % 1 * 4294967296) | 0;
+      }
+    }
+    var bytes = unescape(encodeURIComponent(text)), len = bytes.length, words = [];
+    for (i = 0; i < len; i++) { words[i >> 2] |= bytes.charCodeAt(i) << (24 - (i % 4) * 8); }
+    words[len >> 2] |= 0x80 << (24 - (len % 4) * 8);
+    var total = (((len + 8) >> 6) + 1) * 16;
+    for (i = 0; i < total; i++) { words[i] = words[i] | 0; }
+    words[total - 2] = Math.floor(len / 536870912);
+    words[total - 1] = (len << 3) | 0;
+    function rot(x, c) { return (x >>> c) | (x << (32 - c)); }
+    for (var off = 0; off < total; off += 16) {
+      var w = words.slice(off, off + 16), st = H.slice(0);
+      for (i = 0; i < 64; i++) {
+        if (i >= 16) {
+          var s0 = rot(w[i - 15], 7) ^ rot(w[i - 15], 18) ^ (w[i - 15] >>> 3);
+          var s1 = rot(w[i - 2], 17) ^ rot(w[i - 2], 19) ^ (w[i - 2] >>> 10);
+          w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0;
+        }
+        var S1 = rot(st[4], 6) ^ rot(st[4], 11) ^ rot(st[4], 25);
+        var ch = (st[4] & st[5]) ^ (~st[4] & st[6]);
+        var t1 = (st[7] + S1 + ch + K[i] + w[i]) | 0;
+        var S0 = rot(st[0], 2) ^ rot(st[0], 13) ^ rot(st[0], 22);
+        var maj = (st[0] & st[1]) ^ (st[0] & st[2]) ^ (st[1] & st[2]);
+        var t2 = (S0 + maj) | 0;
+        st = [(t1 + t2) | 0, st[0], st[1], st[2], (st[3] + t1) | 0, st[4], st[5], st[6]];
+      }
+      for (i = 0; i < 8; i++) { H[i] = (H[i] + st[i]) | 0; }
+    }
+    return H.map(function (x) { return ('00000000' + (x >>> 0).toString(16)).slice(-8); }).join('');
+  }
+  /* SHA-256 of a plan's scope list in a fixed order. The helper computes the same value. */
+  function planFingerprint(scopes) {
+    var rows = arr(scopes).slice().sort(function (p, q) { return (p.order || 0) - (q.order || 0); }).map(function (item) {
+      var q = item.short_query || {};
+      /* plan format 3: the whole query, the action, the approval, and the scope it applies to */
+      var cells = Object.prototype.hasOwnProperty.call(item, 'action')
+        ? [item.ref, item.parent_ref, item.short_name, canonical(q), item.action, item.approved ? 'approved' : '', (item.before || {}).id || '']
+        : [item.ref, item.parent_ref, item.short_name, q.type, q.field, q.value];
+      return cells.map(function (x) { return String(x == null ? '' : x); }).join('\u001f');
+    });
+    return sha256Hex(rows.join('\u001e'));
+  }
+
+  function normalizeExisting(data) {
+    if (Array.isArray(data)) { return data; }
+    if (data && Array.isArray(data.scopes)) { return data.scopes; }
+    if (data && Array.isArray(data.results)) { return data.results; }
+    return null;
+  }
+  function findRequested(list, wanted) {
+    wanted = trim(wanted);
+    if (!wanted) { return null; }
+    var exact = arr(list).filter(function (s) { return s && s.name === wanted; });
+    if (exact.length === 1) { return exact[0]; }
+    var loose = arr(list).filter(function (s) { return s && (lc(s.name) === lc(wanted) || lc(s.short_name) === lc(wanted)); });
+    return loose.length === 1 ? loose[0] : null;
+  }
+  function existingRoots(list) {
+    var ids = {};
+    arr(list).forEach(function (s) { if (s) { ids[s.id] = true; } });
+    return arr(list).filter(function (s) { return s && (!s.parent_app_scope_id || !ids[s.parent_app_scope_id]); });
+  }
+
+  /* ---------- the planner ---------- */
+  function buildPlan(doc, existingList, opts) {
+    opts = opts || {};
+    var a = (doc && doc.answers) || {};
+    var customer = a.customer || {}, tenant = a.tenant || {}, ls = a.label_sources || {};
+    var structure = a.structure || {}, access = a.access || {}, compliance = a.compliance || {};
+    var apps = arr(a.applications), envs = arr(structure.environments).map(trim).filter(Boolean);
+    var serviceRows = arr(structure.shared_services).map(function (s) {
+      return (s && typeof s === 'object') ? { name: trim(s.name), subnets: trim(s.subnets) } : { name: trim(s), subnets: '' };
+    }).filter(function (s) { return s.name; });
+    var services = serviceRows.map(function (s) { return s.name; });
+    var teams = access.separate_teams === true ? arr(access.teams).filter(function (t) { return trim(t.name); }) : [];
+    var zonesOn = compliance.has_zones === true;
+    var zones = zonesOn ? arr(compliance.zones).filter(function (z) { return trim(z.name); }) : [];
+    var findings = [], todo = [];
+    function blocker(t) { findings.push({ level: 'blocker', text: t }); }
+    function review(t) { findings.push({ level: 'review', text: t }); }
+    function later(t) { findings.push({ level: 'later', text: t }); }
+
+    /* label names */
+    var names = {};
+    LABEL_KEYS.forEach(function (k) { names[k] = trim((opts.labelNames || {})[k]) || k; });
+    function nm(k) { return names[k]; }
+    LABEL_KEYS.forEach(function (k, i) {
+      var v = names[k];
+      if (!/^[A-Za-z0-9][A-Za-z0-9 _-]*$/.test(v)) { blocker('The label name "' + v + '" is not usable. Use letters, digits, spaces, hyphens, and underscores, starting with a letter or digit.'); }
+      if (lc(v) === 'ip' || lc(v) === 'vrf') { blocker('The label name "' + v + '" is reserved by Secure Workload.'); }
+      RESERVED_PREFIXES.forEach(function (p) { if (lc(v).indexOf(lc(p)) === 0) { blocker('The label name "' + v + '" starts with "' + p + '", which Secure Workload reserves.'); } });
+      LABEL_KEYS.slice(0, i).forEach(function (o) { if (lc(names[o]) === lc(v)) { blocker('Two label names are the same: "' + v + '". Each of the four needs its own name.'); } });
+    });
+
+    /* file-level checks */
+    if (doc.complete !== true) { blocker('The answers file is marked in progress. Ask the customer to use Finish And Save.'); }
+    if (tenant.deployment !== 'saas' && tenant.deployment !== 'onprem') { blocker('The answers file does not say whether the tenant is SaaS or on-premises.'); }
+    if (tenant.deployment === 'onprem' && tenant.release === 'older') { blocker('The cluster runs a release older than 3.10. This plan is built for release 3.10 and later.'); }
+    if (tenant.deployment === 'onprem' && (tenant.release === 'unknown' || !tenant.release)) { review('The cluster release is not known. Confirm it is 3.10 or later before building.'); }
+    if (tenant.kubernetes === true) { review('The customer runs Kubernetes or OpenShift. Those workloads are planned separately by namespace and are not part of this plan. Cisco advises against defining scopes for Kubernetes inventory by address or subnet.'); }
+    var sources = arr(ls.sources), fields = arr(ls.fields);
+    if (sources.indexOf('none') >= 0 && sources.length > 1) { review('The customer selected "Nowhere reliable" together with another records source. Confirm which is correct.'); }
+    if (tenant.existing_tree === true && !existingList) { blocker('The customer says scopes already exist, but no existing scope list was loaded. Load the export file so the plan can avoid changing what exists.'); }
+    if (tenant.existing_tree === false && existingList) { review('An existing scope list was loaded, but the customer answered that the tenant is new.'); }
+
+    /* layers */
+    var siteLayer = teams.some(function (t) { return t.manages_by === 'site'; });
+    var zoneLayer = zones.length > 0 && (zones.some(function (z) { return z.separate_team === true; }) || teams.some(function (t) { return t.manages_by === 'zone'; }));
+    var layers = ['Environment'];
+    if (siteLayer) { layers.push('Location'); }
+    if (zoneLayer) { layers.push('Zone'); }
+    layers.push('Application');
+    if (siteLayer) { review('A Location level was added because at least one team divides its responsibility by site or cloud.'); }
+    if (zoneLayer) { review('A Zone level was added because a regulated zone has its own policy team. Applications outside any zone are placed under "' + UNREGULATED + '".'); }
+    teams.forEach(function (t) {
+      if (!t.manages_by || t.manages_by === 'unknown') { later('Team "' + trim(t.name) + '" has not said how its responsibility is divided, so no level was added for it.'); }
+    });
+
+    /* existing tree */
+    var exRoot = null, exChildren = {}, exCount = 0, countIsWhole = false;
+    if (existingList) {
+      var roots = existingRoots(existingList);
+      if (!roots.length) { blocker('The existing scope list holds no top-level scope.'); }
+      else {
+        var asked = trim(tenant.build_under);
+        var askedScope = findRequested(existingList, asked);
+        exRoot = existingList.filter(function (r) { return r && r.id === opts.rootId; })[0] || askedScope || roots[0];
+        if (asked && !askedScope) { review('The customer asked to build under "' + asked + '", but the scope list has no single scope with that name. This plan builds under "' + (exRoot.name || exRoot.short_name) + '". Confirm the parent with the customer.'); }
+        else if (asked && askedScope.id !== exRoot.id) { review('The customer asked to build under "' + (askedScope.name || asked) + '", but this plan builds under "' + (exRoot.name || exRoot.short_name) + '".'); }
+        else if (!asked && !opts.rootId) { review('The customer did not say which scope to build under. This plan builds under "' + (exRoot.name || exRoot.short_name) + '", the top of the scope list. Confirm the parent with the customer.'); }
+        var exById = {};
+        existingList.forEach(function (s) { if (s) { exById[s.id] = s; } });
+        existingList.forEach(function (s) {
+          if (s && s.parent_app_scope_id) { (exChildren[s.parent_app_scope_id] = exChildren[s.parent_app_scope_id] || []).push(s); }
+        });
+        /* child scopes are counted per top-level scope: scopes that have a parent, under the same top as the chosen parent */
+        var topOf = function (s) {
+          var seen = {};
+          while (s.parent_app_scope_id && exById[s.parent_app_scope_id] && !seen[s.id]) { seen[s.id] = true; s = exById[s.parent_app_scope_id]; }
+          return s.id;
+        };
+        var myTop = topOf(exRoot);
+        existingList.forEach(function (s) { if (s && s.parent_app_scope_id && topOf(s) === myTop) { exCount += 1; } });
+        if (Number(opts.tenantChildCount) >= 0 && opts.tenantChildCount !== null && opts.tenantChildCount !== undefined && opts.tenantChildCount !== '') { exCount = Number(opts.tenantChildCount); countIsWhole = true; }
+      }
+    }
+
+    /* what the parent scope stands for (anchors) */
+    var known = {
+      Environment: envs.concat(envs.some(function (e) { return lc(e) === lc(SHARED); }) ? [] : [SHARED]),
+      Location: arr(structure.locations).map(function (l) { return trim(l && l.name); }).filter(Boolean),
+      Zone: zones.map(function (z) { return trim(z.name); }),
+      Application: apps.map(function (ap) { return trim(ap && ap.name); }).filter(Boolean).concat(services)
+    };
+    LEVELS.forEach(function (L) {
+      var seenValue = {};
+      known[L] = known[L].filter(function (v) { if (seenValue[lc(v)]) { return false; } seenValue[lc(v)] = true; return true; });
+    });
+    function canon(level, value) { return known[level].concat(level === 'Zone' ? [UNREGULATED] : []).filter(function (v) { return lc(v) === lc(value); })[0]; }
+    var proposals = {}, anchored = {}, anchors = [], anchorRows = [], pending = [];
+    if (exRoot) {
+      var chain = [], walker = exRoot, guard = {};
+      while (walker && !guard[walker.id]) { guard[walker.id] = true; chain.unshift(walker); walker = walker.parent_app_scope_id ? exById[walker.parent_app_scope_id] : null; }
+      chain.forEach(function (sc, position) {
+        var q = asQuery(sc.short_query), found = null;
+        if (q && typeof q === 'object' && q.type === 'eq' && typeof q.field === 'string' && q.field.toLowerCase().indexOf('user_') === 0) {
+          var label = q.field.slice(5);
+          LEVELS.forEach(function (L) {
+            if (!found && lc(names[L]) === lc(label) && canon(L, q.value) && lc(canon(L, q.value)) !== lc(UNREGULATED)) { found = { level: L, value: canon(L, q.value), source: 'query' }; }
+          });
+        }
+        if (!found) {
+          var hits = [];
+          LEVELS.forEach(function (L) {
+            known[L].forEach(function (v) { if (lc(v) === lc(sc.short_name)) { hits.push({ level: L, value: v, source: 'name' }); } });
+          });
+          if (hits.length === 1) { found = hits[0]; }
+          else if (hits.length > 1) {
+            review('The scope "' + (sc.name || sc.short_name) + '" has the same name as a value in more than one level (' + hits.map(function (x) { return LEVEL_WORDS[x.level]; }).join(' and ') + '). Choose what it stands for under "What The Parent Scope Stands For".');
+          }
+        }
+        if (found) {
+          found.scope_id = sc.id; found.scope_name = sc.name || sc.short_name; found.position = position;
+          if (proposals[found.level]) { review('Two scopes at or above the parent both look like the ' + LEVEL_WORDS[found.level] + ' level: "' + proposals[found.level].scope_name + '" and "' + found.scope_name + '". The first is proposed. Check it under "What The Parent Scope Stands For".'); }
+          else { proposals[found.level] = found; }
+        }
+      });
+      LEVELS.forEach(function (L) {
+        var prop = proposals[L] || null, choice = (opts.anchors || {})[L], row = { level: L, word: LEVEL_WORDS[L], label: names[L], options: known[L].concat(L === 'Zone' && known[L].length ? [UNREGULATED] : []), proposed: prop, value: '', state: 'none' };
+        if (choice && typeof choice === 'object') {
+          var v = trim(choice.value);
+          if (!v) { row.state = prop ? 'cleared' : 'none'; }
+          else if (!canon(L, v)) { blocker('"' + v + '" is not a known ' + LEVEL_WORDS[L].toLowerCase() + ' in the customer\'s answers, so the parent scope cannot stand for it.'); row.value = v; row.state = 'invalid'; }
+          else {
+            row.value = canon(L, v); row.state = 'confirmed';
+            var fromProposal = prop && lc(prop.value) === lc(v);
+            anchored[L] = row.value;
+            anchors.push({ scope_id: fromProposal ? prop.scope_id : exRoot.id, scope_name: fromProposal ? prop.scope_name : (exRoot.name || exRoot.short_name), level: L, value: row.value, source: fromProposal ? prop.source : 'consultant', position: fromProposal ? prop.position : chain.length - 1 });
+          }
+        } else if (prop) {
+          row.value = prop.value; row.state = 'pending';
+          pending.push(LEVEL_WORDS[L] + ' = ' + prop.value + ' (from the ' + prop.source + ' of "' + prop.scope_name + '")');
+        }
+        anchorRows.push(row);
+      });
+      anchors.sort(function (p, q) { return p.position - q.position || LEVELS.indexOf(p.level) - LEVELS.indexOf(q.level); });
+      anchors.forEach(function (x) { delete x.position; });
+      if (pending.length) { blocker('Confirm or clear what the parent scope stands for before building: ' + pending.join('; ') + '. Use "What The Parent Scope Stands For" on the planner page.'); }
+    }
+    var nothingBelow = !!anchored.Application;
+    if (nothingBelow) { blocker('The parent scope stands for the application "' + anchored.Application + '". There is nothing to build below an application scope, so this plan is empty. Choose a different parent.'); }
+
+    /* nodes */
+    var partial = !!(exRoot && !countIsWhole && (opts.partial === true || existingRoots(existingList).some(function (r) { return r.parent_app_scope_id; })));
+    var rootName = exRoot ? (exRoot.short_name || exRoot.name) : (trim(customer.name) || 'Top-level scope');
+    var root = { ref: 'root', parent_ref: null, short_name: rootName, label: null, value: null, depth: 0, status: 'exists', existing_id: exRoot ? exRoot.id : null, children: [] };
+    var byKey = { '': root }, seq = 0, appSeen = {};
+    function ensure(parentKey, label, value) {
+      var key = parentKey + '\u0001' + lc(value);
+      if (!byKey[key]) {
+        var parent = byKey[parentKey];
+        seq += 1;
+        var n = { ref: 's' + seq, parent_ref: parent.ref, short_name: trim(value), layer: label, label: names[label], value: trim(value), depth: parent.depth + 1, status: 'create', existing_id: null, children: [], key: key };
+        parent.children.push(n); byKey[key] = n;
+      }
+      return key;
+    }
+
+    var active = layers.filter(function (L) { return !anchored[L]; });
+    var envActive = active.indexOf('Environment') >= 0;
+    var anyAnchor = Object.keys(anchored).length > 0, outside = [];
+    function inside(values) { return LEVELS.every(function (L) { return !anchored[L] || lc(values[L]) === lc(anchored[L]); }); }
+    if (envActive && !nothingBelow) { envs.forEach(function (e) { ensure('', 'Environment', e); }); }
+
+    var recordsApps = [], emptyApps = [], labelRows = [], tokenOwners = [];
+    function collect(who, owner, subnets, row) {
+      tokens(subnets).forEach(function (t) {
+        var p = parseToken(t);
+        if (!p) { blocker(who + ': "' + t + '" is not a valid subnet or address.'); return; }
+        if (!p.aligned) { blocker(who + ': ' + t + ' does not start on its network address. It should be written ' + p.fixed + '.'); return; }
+        var r = { IP: t }; Object.keys(row).forEach(function (k) { r[k] = row[k]; });
+        tokenOwners.push({ p: p, who: owner, row: r });
+      });
+    }
+    apps.forEach(function (app, i) {
+      var name = trim(app.name), env = trim(app.environment), who = 'Application ' + (i + 1) + (name ? ' (' + name + ')' : '');
+      if (!name) { blocker(who + ' has no name.'); return; }
+      if (!env) { later(who + ' has no environment yet, so it is left out of this round.'); return; }
+      var envName = envs.filter(function (e) { return lc(e) === lc(env); })[0];
+      if (!envName) { blocker(who + ' uses the environment "' + env + '", which is not in the environment list.'); return; }
+      if (lc(env) === lc(SHARED) && services.some(function (s) { return lc(s) === lc(name); })) { blocker(who + ' has the same name as a shared service and sits in the ' + SHARED + ' environment.'); return; }
+      var zone = zonesOn ? trim(app.zone) : '';
+      if (zone && !zones.some(function (z) { return lc(z.name) === lc(zone); })) { blocker(who + ' uses the regulated zone "' + zone + '", which is not in the zone list.'); zone = ''; }
+      var loc = trim(app.location);
+      if (nothingBelow) { return; }
+      if (anyAnchor && !inside({ Environment: envName, Location: loc, Zone: zone || UNREGULATED, Application: name })) { outside.push(name + ' (' + envName + ')'); return; }
+      var key = '', leftOut = false;
+      active.forEach(function (L) {
+        if (leftOut || L === 'Application') { return; }
+        if (L === 'Environment') { key = ensure(key, 'Environment', envName); }
+        else if (L === 'Location') {
+          if (!loc) { later(who + ' has no site or cloud yet. The tree has a Location level, so it is left out of this round.'); leftOut = true; return; }
+          key = ensure(key, 'Location', loc);
+        }
+        else if (L === 'Zone') { key = ensure(key, 'Zone', zone || UNREGULATED); }
+      });
+      if (leftOut) { return; }
+      var appKey = key + '\u0001' + lc(name);
+      if (appSeen[appKey]) { blocker(who + ' is listed more than once in the same place in the tree.'); return; }
+      appSeen[appKey] = true;
+      ensure(key, 'Application', name);
+
+      var toks = tokens(app.subnets);
+      if (!toks.length) {
+        if (fields.indexOf('application') < 0) {
+          later(who + ' has no addresses yet, and the customer records do not tie servers to applications. Its scope is created now and stays empty until its servers are labeled.');
+          emptyApps.push(name + ' (' + env + ')');
+        }
+        else { recordsApps.push(name + ' (' + env + ')'); }
+      }
+      collect(who, name + ' (' + env + ')', app.subnets, { Environment: envName, Application: name, Location: loc, Zone: zoneLayer ? (zone || UNREGULATED) : zone });
+    });
+    var emptyServices = [], servicesIn = [];
+    serviceRows.forEach(function (s) {
+      if (nothingBelow) { return; }
+      if (anyAnchor && !inside({ Environment: SHARED, Location: '', Zone: '', Application: s.name })) { outside.push(s.name + ' (' + SHARED + ')'); return; }
+      servicesIn.push(s.name);
+      if (!tokens(s.subnets).length) { emptyServices.push(s.name); }
+      collect('Shared service ' + s.name, s.name + ' (' + SHARED + ')', s.subnets, { Environment: SHARED, Application: s.name, Location: '', Zone: '' });
+    });
+    if (outside.length) { review('These are outside the chosen parent and are not in this plan: ' + outside.join(', ') + '.'); }
+
+    /* address conflicts */
+    var dropped = {};
+    for (var x = 0; x < tokenOwners.length; x++) {
+      for (var y = x + 1; y < tokenOwners.length; y++) {
+        var A = tokenOwners[x], B = tokenOwners[y];
+        if (A.p.v !== B.p.v) { continue; }
+        if (A.p.key === B.p.key) {
+          if (A.who === B.who) { dropped[y] = true; }
+          else {
+            dropped[x] = true; dropped[y] = true;
+            blocker(A.p.text + ' is listed for both ' + A.who + ' and ' + B.who + '. One address or subnet can carry only one set of labels, so it is left out of the label file. List the addresses of each one\'s own servers in place of the shared subnet.');
+          }
+        } else if (A.p.v === 4 && A.who !== B.who && A.p.start <= B.p.end && B.p.start <= A.p.end) {
+          review(A.p.text + ' (' + A.who + ') overlaps ' + B.p.text + ' (' + B.who + '). Confirm which application the servers in the shared range belong to.');
+        }
+      }
+    }
+    var ipCount = 0, subnetCount = 0;
+    tokenOwners.forEach(function (o, i) {
+      if (dropped[i]) { return; }
+      labelRows.push(o.row);
+      if (o.p.hasSlash) { subnetCount += 1; } else { ipCount += 1; }
+    });
+
+    /* shared services */
+    if (servicesIn.length) {
+      var sk = envActive ? ensure('', 'Environment', SHARED) : '';
+      servicesIn.forEach(function (s) { ensure(sk, 'Application', s); });
+      if (emptyServices.length) { later('These shared services have no addresses yet: ' + emptyServices.join(', ') + '. Their scopes are created now and stay empty until their servers are labeled.'); }
+    }
+
+    /* zones with no applications */
+    zones.forEach(function (z) {
+      if (!apps.some(function (ap) { return lc(ap.zone) === lc(z.name); })) { later('Regulated zone "' + trim(z.name) + '" has no application assigned yet, so nothing carries its label.'); }
+    });
+    envs.forEach(function (e) {
+      var n = byKey['\u0001' + lc(e)];
+      if (n && !n.children.length) { later('Environment "' + e + '" has no applications listed yet. Its scope is created with nothing under it.'); }
+    });
+
+    /* match against the existing tree, parents first */
+    var ordered = [];
+    (function flat(n) { n.children.forEach(function (c) { ordered.push(c); }); n.children.forEach(flat); })(root);
+    ordered.sort(function (p, q) { return p.depth - q.depth; });
+    var refMap = { root: root };
+    ordered.forEach(function (n) { refMap[n.ref] = n; });
+    var changes = opts.changes || {}, approvedIds = changes.approved || {}, removeIds = changes.remove || {};
+    var claimed = {}, extras = [], depStatus = opts.dependents || null;
+    function wantQuery(n) { return { type: 'eq', field: 'user_' + n.label, value: n.value }; }
+    function beforeOf(sc) { return { id: sc.id, short_name: sc.short_name, short_query: asQuery(sc.short_query), parent_id: sc.parent_app_scope_id || null }; }
+    function depsOf(sc) {
+      var out = {};
+      DEPENDENT_KINDS.forEach(function (k) {
+        var v = sc.dependents && typeof sc.dependents === 'object' ? sc.dependents[k[0]] : undefined;
+        out[k[0]] = Array.isArray(v) ? v.map(function (x) { return { id: x && x.id, name: x && x.name }; }) : 'not read';
+      });
+      return out;
+    }
+    function depsInUse(deps) { return DEPENDENT_KINDS.reduce(function (sum, k) { return sum + (Array.isArray(deps[k[0]]) ? deps[k[0]].length : 0); }, 0); }
+    function depsWords(deps) {
+      var found = [], unread = [];
+      DEPENDENT_KINDS.forEach(function (k) {
+        var v = deps[k[0]];
+        if (!Array.isArray(v)) { unread.push(k[2]); }
+        else if (v.length) { found.push(v.length + ' ' + (v.length === 1 ? k[1] : k[2]) + ' (' + v.map(function (x) { return x.name || x.id; }).join(', ') + ')'); }
+      });
+      return (found.length ? found.join(', ') : (unread.length === DEPENDENT_KINDS.length ? '' : 'Nothing found')) + (unread.length ? (found.length || unread.length < DEPENDENT_KINDS.length ? '. ' : '') + 'Not read: ' + unread.join(', ') : '');
+    }
+    if (exRoot) {
+      ordered.forEach(function (n) {
+        var parent = refMap[n.parent_ref];
+        if (!parent.existing_id) { return; }
+        var kids = arr(exChildren[parent.existing_id]).filter(function (c) { return !claimed[c.id]; });
+        var want = wantQuery(n);
+        /* rule 2: same parent and same short name */
+        var hit = kids.filter(function (c) { return sameName(c.short_name, n.short_name)[0]; })[0];
+        if (hit) {
+          claimed[hit.id] = true; n.existing_id = hit.id; n.existing = hit; n.match_rule = 'same parent and same name';
+          var q = asQuery(hit.short_query) || {};
+          var cmp = sameQuery(q, want);
+          n.status = cmp[0] ? 'exists' : 'conflict';
+          if (!cmp[0]) {
+            n.existing_query = JSON.stringify(q);
+            review('Scope "' + n.short_name + '" under "' + parent.short_name + '" already exists with a different query: ' + describeQuery(q) + '. A change to "' + describeQuery(want) + '" is proposed under Changes To Existing Scopes. Nothing is changed unless you approve it there.');
+          }
+          var spellings = [];
+          if (!sameName(hit.short_name, n.short_name)[1]) { spellings.push('the tenant names it "' + hit.short_name + '" and the plan names it "' + n.short_name + '"'); }
+          var plainEq = q.type === 'eq' && keysAre(q, 'field,type,value');
+          if (cmp[0] && !cmp[1]) { spellings.push(plainEq ? 'the tenant writes its query as ' + q.field + ' = "' + q.value + '" and the plan writes user_' + n.label + ' = "' + n.value + '"' : 'the tenant writes its query as ' + canonical(q) + ', which means the same as the plan\'s "' + describeQuery(want) + '"'); }
+          if (spellings.length) { review('Scope "' + n.short_name + '" under "' + parent.short_name + '" is the same scope ' + (cmp[0] && !cmp[1] && !plainEq ? 'written differently' : 'with different capital letters') + ': ' + spellings.join(', and ') + '. It is kept as the tenant has it. Use the tenant\'s spelling in commands.'); }
+          return;
+        }
+        /* rule 3: same parent and an equivalent query */
+        hit = kids.filter(function (c) { return sameQuery(c.short_query, want)[0]; })[0];
+        if (hit) {
+          claimed[hit.id] = true; n.existing_id = hit.id; n.existing = hit; n.match_rule = 'same parent and equivalent query'; n.status = 'rename';
+          review('Scope "' + n.short_name + '" under "' + parent.short_name + '" already exists under the name "' + hit.short_name + '" with the same query. A rename is proposed under Changes To Existing Scopes. Nothing is changed unless you approve it there.');
+        }
+      });
+      /* rule 4: the same name or an equivalent query anywhere else is not a match, only a question for the consultant */
+      ordered.forEach(function (n) {
+        if (n.existing_id) { return; }
+        var want = wantQuery(n);
+        var maybe = existingList.filter(function (c) { return c && !claimed[c.id] && c.id !== exRoot.id && (sameName(c.short_name, n.short_name)[0] || sameQuery(c.short_query, want)[0]); });
+        if (maybe.length) {
+          n.may_exist = maybe.map(function (c) { return c.id; });
+          review('Scope "' + n.short_name + '", planned under "' + refMap[n.parent_ref].short_name + '", may already exist as ' + maybe.map(function (c) { return '"' + (c.name || c.short_name) + '"'; }).join(' or ') + '. It is not treated as the same scope, because it has a different parent and this tool cannot move a scope. The plan creates a new one. Leave the old one, or mark it for removal under Changes To Existing Scopes.');
+        }
+      });
+      [root].concat(ordered).forEach(function (n) {
+        if (!n.existing_id) { return; }
+        var extra = arr(exChildren[n.existing_id]).filter(function (c) { return !claimed[c.id]; }).map(function (c) { return c.short_name; });
+        if (extra.length && n.children.some(function (c) { return c.status === 'create'; })) {
+          review('Under "' + n.short_name + '" these existing scopes are not part of this plan: ' + extra.join(', ') + '. New scopes created beside them must not overlap them.');
+        }
+      });
+      /* every other existing scope below the parent: left alone unless the consultant marks it for removal */
+      var refOfExisting = {};
+      refOfExisting[exRoot.id] = 'root';
+      ordered.forEach(function (n) { if (n.existing_id) { refOfExisting[n.existing_id] = n.ref; } });
+      (function walk(sc, depth) {
+        arr(exChildren[sc.id]).slice().sort(function (x, y) { return lc(x.short_name) < lc(y.short_name) ? -1 : 1; }).forEach(function (c) {
+          if (!claimed[c.id]) { refOfExisting[c.id] = 'x-' + c.id; extras.push({ sc: c, depth: depth + 1 }); }
+          walk(c, depth + 1);
+        });
+      })(exRoot, 0);
+      var removing = {};
+      extras.forEach(function (e) { if (removeIds[e.sc.id]) { removing[e.sc.id] = true; } });
+      /* a scope can be removed only when everything under it is also being removed, and nothing is known to depend on it */
+      var settled = false;
+      while (!settled) {
+        settled = true;
+        extras.forEach(function (e) {
+          if (removing[e.sc.id] !== true) { return; }
+          var kept = arr(exChildren[e.sc.id]).filter(function (c) { return removing[c.id] !== true; });
+          if (kept.length) { removing[e.sc.id] = 'It has scopes under it that are not also being removed: ' + kept.map(function (c) { return c.short_name; }).join(', ') + '. Remove those first, or mark them for removal too.'; settled = false; }
+          else if (depsInUse(depsOf(e.sc))) { removing[e.sc.id] = 'It is in use: ' + depsWords(depsOf(e.sc)).split('. Not read')[0] + '. Clear what depends on it in Secure Workload first.'; settled = false; }
+        });
+      }
+      extras.forEach(function (e) {
+        var mark = removing[e.sc.id];
+        e.action = mark === true ? 'remove' : (mark ? 'by_hand' : 'leave');
+        if (mark && mark !== true) { e.reason = mark; }
+      });
+    }
+    var proposedRenames = ordered.filter(function (n) { return n.status === 'rename'; }).length;
+    var proposedQueries = ordered.filter(function (n) { return n.status === 'conflict'; }).length;
+    var markedRemovals = extras.filter(function (e) { return e.action === 'remove'; });
+    if (proposedRenames) { review('Renaming a scope changes the full name of that scope and every scope below it. Anything that refers to them by full name is affected.'); }
+    if (proposedQueries) { review('Changing a scope\'s query changes which workloads are in it and in every scope below it. Policies in workspaces on those scopes will apply to a different set of workloads. The change takes effect when it is committed.'); }
+    if (markedRemovals.length) {
+      review('Removing a scope cannot be reversed with its original ID. Undo recreates it with a new ID.');
+      var unreadKinds = DEPENDENT_KINDS.filter(function (k) { return markedRemovals.some(function (e) { return !Array.isArray(depsOf(e.sc)[k[0]]); }); }).map(function (k) { return k[2]; });
+      if (unreadKinds.length) { review('The scope list does not say whether ' + unreadKinds.join(', ') + ' depend on the scopes marked for removal' + (depStatus ? '' : ', because it was saved by an older helper') + ', so each is treated as possibly in use. The tenant refuses the removal if anything depends on the scope, and the helper reports what it says.'); }
+    }
+    extras.filter(function (e) { return e.action === 'by_hand'; }).forEach(function (e) { review('Scope "' + (e.sc.name || e.sc.short_name) + '" is marked for removal, but this tool will not remove it. ' + e.reason); });
+
+    /* names */
+    ordered.forEach(function (n) {
+      if (n.status === 'create' && n.short_name.indexOf(':') >= 0) { review('Scope name "' + n.short_name + '" contains a colon. Secure Workload joins scope levels with colons in the full scope name, so this name will be confusing. Consider renaming it.'); }
+    });
+
+    /* limits */
+    var toCreate = ordered.filter(function (n) { return n.status === 'create'; });
+    var maxDepth = ordered.reduce(function (m, n) { return Math.max(m, n.depth); }, 0);
+    var maxKids = 0, maxKidsAt = rootName;
+    [root].concat(ordered).forEach(function (n) {
+      var total = n.children.filter(function (c) { return c.status === 'create'; }).length + (n.existing_id ? arr(exChildren[n.existing_id]).length : 0);
+      if (total > maxKids) { maxKids = total; maxKidsAt = n.short_name; }
+    });
+    var lic = Number(tenant.license_count) || 0;
+    var checks = [];
+    function check(name, value, limit, ok, source, note) {
+      checks.push({ name: name, value: value, limit: limit, result: ok === null ? 'not checked' : (ok ? 'pass' : 'fail'), source: source, note: note || '' });
+      if (ok === false) { blocker(name + ': ' + value + ' is over the limit of ' + limit + '.'); }
+    }
+    var totalScopes = exCount + toCreate.length;
+    check('Child scopes in the tenant', totalScopes, LIMITS.scopesPerTenant, totalScopes <= LIMITS.scopesPerTenant, REFS.limits39, (exCount ? (exCount + ' existing plus ' + toCreate.length + ' new. ') : '') + (partial ? 'The export covers only part of the tenant, so scopes elsewhere are not counted.' : ''));
+    check('Most child scopes under one parent', maxKids, LIMITS.childrenPerParent, maxKids <= LIMITS.childrenPerParent, 'Cisco Secure Workload 4.0 configuration limits', 'Under "' + maxKidsAt + '"');
+    check('Levels below the top-level scope', maxDepth, LIMITS.depthBelowRoot, maxDepth <= LIMITS.depthBelowRoot, REFS.principles, 'Cisco says to keep the tree shallow and gives no number. Four is this tool\'s own ceiling.');
+    if (tenant.deployment === 'saas' && lic <= 0) { later('The license count was not given, so the SaaS label limits were not checked.'); }
+    if (tenant.deployment === 'saas') {
+      var ipMax = Math.floor(lic * LIMITS.saasIpsPerLicense), subMax = Math.floor(lic * LIMITS.saasSubnetsPerLicense);
+      check('Labeled addresses in the label file (SaaS)', ipCount, ipMax, lic > 0 ? ipCount <= ipMax : null, REFS.labelLimits, '6,000 per 100 licenses, at ' + lic + ' licenses');
+      check('Labeled subnets in the label file (SaaS)', subnetCount, subMax, lic > 0 ? subnetCount <= subMax : null, REFS.labelLimits, '120 per 100 licenses, at ' + lic + ' licenses');
+    } else {
+      check('Labeled addresses and subnets (on-premises)', ipCount + subnetCount, 'depends on cluster size', null, REFS.limits39, 'Compare against the limits for the customer cluster size.');
+    }
+
+    /* label plan */
+    var labelCols = ['Environment', 'Application'];
+    if (siteLayer || labelRows.some(function (r) { return r.Location; })) { labelCols.push('Location'); }
+    if (zoneLayer || labelRows.some(function (r) { return r.Zone; })) { labelCols.push('Zone'); }
+    var labels = labelCols.map(function (k) {
+      var vals = {};
+      ordered.forEach(function (n) { if (n.layer === k) { vals[n.value] = true; } });
+      labelRows.forEach(function (r) { if (r[k]) { vals[r[k]] = true; } });
+      return { key: nm(k), role: k, values: Object.keys(vals).sort(), used_in_scope_queries: layers.indexOf(k) >= 0 };
+    });
+
+    /* label names already in the tenant */
+    var tenantCols = Array.isArray(opts.labelColumns) ? opts.labelColumns : null;
+    if (tenantCols) {
+      var actualCols = labelCols.map(nm);
+      var sharedNames = actualCols.filter(function (c) { return tenantCols.indexOf(c) >= 0; });
+      var newNames = actualCols.filter(function (c) { return tenantCols.indexOf(c) < 0; });
+      newNames.forEach(function (c) {
+        var near = tenantCols.filter(function (t) { return lc(t) === lc(c); })[0];
+        if (near) { review('The label name "' + c + '" differs from the existing tenant label "' + near + '" only by capitalization. Secure Workload would treat them as two labels. Use the exact existing name or a clearly different one.'); }
+      });
+      check('Label names in the tenant after upload', tenantCols.length + newNames.length, LIMITS.labelColumns, tenantCols.length + newNames.length <= LIMITS.labelColumns, REFS.labelApi, newNames.length ? ('Adds: ' + newNames.join(', ')) : 'Adds none');
+      if (sharedNames.length) { review('The tenant already uses the label names ' + sharedNames.join(', ') + '. Keep a name only if it already means the same thing in this tenant. If it means something else, change it under Label Names and rebuild. Where the label file gives a different value for the same address, uploading replaces the value in the tenant, so run the check-labels command before uploading.'); }
+    }
+
+    /* to-do list */
+    var underName = exRoot ? (exRoot.name || rootName) : 'the full name of the scope to build under';
+    var blockers = findings.filter(function (f) { return f.level === 'blocker'; }).length;
+    if (blockers) { todo.push('Resolve the blockers listed in this plan and send a corrected answers file. Do not create scopes from this version.'); }
+    if (labelRows.length) {
+      todo.push('Check the label file against the tenant before uploading. Run: python3 csw_scope_helper.py check-labels --labels "your label file" --under "' + underName + '". It changes nothing and lists any value an upload would replace.');
+      todo.push('Upload the label file (' + labelRows.length + (labelRows.length === 1 ? ' row' : ' rows') + ') in Secure Workload under Organize > Label Management > User Defined Label Upload. Choose the Merge operation, so blank cells never erase existing labels.');
+    }
+    if (recordsApps.length) { todo.push('No addresses were given for these applications, so their labels must come from your own records system. Make sure every server in them carries the labels ' + layers.map(nm).join(', ') + ' before the scopes are created: ' + recordsApps.join('; ') + '.'); }
+    if (emptyServices.length) { todo.push('When you know where these shared services run, add their addresses to your answers for the next round, or label their servers with ' + nm('Environment') + ' = ' + SHARED + ' and ' + nm('Application') + ' = the service name: ' + emptyServices.join(', ') + '.'); }
+    if (emptyApps.length) { todo.push('When you know the addresses for these applications, add them to your answers for the next round: ' + emptyApps.join('; ') + '.'); }
+    if (toCreate.length) {
+      todo.push('Create the ' + toCreate.length + (toCreate.length === 1 ? ' new scope' : ' new scopes') + ' in the order shown in this plan, parents first, each with the query shown. Do it by hand on the Scopes and Inventory page, or run: python3 csw_scope_helper.py apply --plan "your plan file" --under "' + underName + '". That command only previews until you add --write.');
+      todo.push('If you created the scopes by hand, select Commit Changes on the Scopes and Inventory page after the last one. The apply command commits for you when it is safe to.');
+      todo.push('Check the workload count in each new scope against what you expect.');
+    }
+    if (findings.some(function (f) { return f.level === 'later'; })) { todo.push('For the next round, open the questionnaire, choose Continue From A Saved File, add what you have learned, answer Yes to the question about existing scopes, run the export program, and send both files. The next plan only adds to what exists.'); }
+
+    var plan = {
+      schema: PLAN_SCHEMA, schema_version: PLAN_SCHEMA_VERSION, tool_version: TOOL_VERSION,
+      generated_at: new Date().toISOString(),
+      customer: { name: trim(customer.name) },
+      tenant: { deployment: tenant.deployment || '', release: tenant.release || '', license_count: lic },
+      source: { answers_saved_at: doc.saved_at || '', answers_schema_version: doc.schema_version || null, existing_tree_loaded: !!existingList, existing_scope_count: exCount, existing_partial: partial },
+      ready: blockers === 0,
+      layers: layers.map(nm),
+      label_names: names,
+      anchors: anchors,
+      root: { short_name: rootName, name: exRoot ? (exRoot.name || rootName) : rootName, existing_id: root.existing_id },
+      scopes: ordered.map(function (n, i) {
+        var want = wantQuery(n);
+        var o = { order: i + 1, ref: n.ref, parent_ref: n.parent_ref, short_name: n.short_name, depth: n.depth, label: n.label, value: n.value, short_query: want, status: n.status, existing_id: n.existing_id };
+        if (n.existing_query) { o.existing_query = n.existing_query; }
+        o.action = n.status === 'create' ? 'create' : (n.status === 'exists' ? 'keep' : (n.status === 'rename' ? 'rename' : 'requery'));
+        o.approved = (o.action === 'rename' || o.action === 'requery') && approvedIds[n.existing_id] === true;
+        if (n.existing) {
+          o.match_rule = n.match_rule;
+          o.before = beforeOf(n.existing); o.full_name = n.existing.name || n.existing.short_name; o.dependents = depsOf(n.existing);
+          /* a scope that is kept, or renamed only, keeps the query the tenant has */
+          o.after = { short_name: o.action === 'rename' ? n.short_name : n.existing.short_name, short_query: o.action === 'requery' ? want : o.before.short_query };
+          if (o.action !== 'requery') { o.short_query = o.before.short_query; }
+        } else { o.after = { short_name: n.short_name, short_query: want }; }
+        if (n.may_exist) { o.may_exist = n.may_exist; }
+        return o;
+      }).concat(extras.map(function (e, i) {
+        var o = { order: ordered.length + i + 1, ref: refOfExisting[e.sc.id], parent_ref: refOfExisting[e.sc.parent_app_scope_id] || 'root', short_name: e.sc.short_name, depth: e.depth, label: '', value: '', short_query: asQuery(e.sc.short_query), status: 'outside', existing_id: e.sc.id,
+          action: e.action, approved: e.action === 'remove' && approvedIds[e.sc.id] === true, before: beforeOf(e.sc), full_name: e.sc.name || e.sc.short_name, dependents: depsOf(e.sc) };
+        if (e.reason) { o.reason = e.reason; }
+        return o;
+      })),
+      labels: labels,
+      label_columns: ['IP'].concat(labelCols.map(nm)),
+      label_rows: labelRows.map(function (r) { var o = { IP: r.IP }; labelCols.forEach(function (k) { o[nm(k)] = r[k]; }); return o; }),
+      checks: checks,
+      findings: findings,
+      todo: todo
+    };
+    var counts = { keep: 0, create: 0, rename: 0, requery: 0, rename_requery: 0, remove: 0, leave: 0, by_hand: 0 };
+    plan.scopes.forEach(function (x) { counts[x.action] += 1; });
+    var needApproval = plan.scopes.filter(function (x) { return x.action === 'rename' || x.action === 'requery' || x.action === 'rename_requery' || x.action === 'remove'; });
+    plan.actions = { counts: counts, need_approval: needApproval.length, approved: needApproval.filter(function (x) { return x.approved; }).length };
+    var approvedChanges = needApproval.filter(function (x) { return x.approved && x.action !== 'remove'; }).length, approvedRemovals = needApproval.filter(function (x) { return x.approved && x.action === 'remove'; }).length;
+    if (approvedChanges || approvedRemovals) {
+      plan.todo.push('This plan has ' + (approvedChanges + approvedRemovals) + ' approved ' + (approvedChanges + approvedRemovals === 1 ? 'change' : 'changes') + ' to existing scopes. The apply command makes them only when you add ' + [approvedChanges ? '--allow-changes (renames and query changes)' : '', approvedRemovals ? '--allow-removals (removals)' : ''].filter(Boolean).join(' and ') + ' after --write. It lists each one, before and after, and waits for you to type yes. Preview first without --write. To look at pending query changes in Secure Workload before they take effect, also add --no-commit and commit there yourself.');
+    }
+    if (needApproval.length > approvedChanges + approvedRemovals) { plan.todo.push((needApproval.length - approvedChanges - approvedRemovals) + ' proposed ' + (needApproval.length - approvedChanges - approvedRemovals === 1 ? 'change' : 'changes') + ' to existing scopes in this plan are not approved. The apply command skips them and lists them as skipped.'); }
+    plan.fingerprint = planFingerprint(plan.scopes);
+    Object.defineProperty(plan, 'ui', { enumerable: false, value: { anchorRows: anchorRows, hasParent: !!exRoot } });
+    return plan;
+  }
+
+  function labelCsv(plan) {
+    function q(v) { v = String(v == null ? '' : v); return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+    var lines = [plan.label_columns.map(q).join(',')];
+    plan.label_rows.forEach(function (r) { lines.push(plan.label_columns.map(function (c) { return q(r[c]); }).join(',')); });
+    return lines.join('\r\n') + '\r\n';
+  }
+
+  /* ---------- report ---------- */
+  function h(tag, attrs, kids) {
+    var n = document.createElement(tag);
+    if (attrs) { Object.keys(attrs).forEach(function (k) { if (k === 'text') { n.textContent = attrs[k]; } else { n.setAttribute(k, attrs[k]); } }); }
+    arr(kids).forEach(function (k) { if (k) { n.appendChild(typeof k === 'string' ? document.createTextNode(k) : k); } });
+    return n;
+  }
+  function table(heads, rows) {
+    var t = h('table', null, [h('thead', null, [h('tr', null, heads.map(function (x) { return h('th', { text: x }); }))])]);
+    var tb = h('tbody');
+    rows.forEach(function (r) { tb.appendChild(h('tr', null, r.map(function (c) { return (c && c.nodeType) ? h('td', null, [c]) : h('td', { text: String(c == null ? '' : c) }); }))); });
+    t.appendChild(tb);
+    return h('div', { 'class': 'tablewrap' }, [t]);
+  }
+  function statusText(s) { return s === 'create' ? 'New' : (s === 'exists' ? 'Already exists' : (s === 'rename' ? 'Exists under another name' : (s === 'outside' ? 'Not in this plan' : 'Exists with a different query'))); }
+  var ACTION_WORDS = { keep: 'Keep', create: 'Create', rename: 'Rename', requery: 'Change Query', rename_requery: 'Rename And Change Query', remove: 'Remove', leave: 'Leave Alone', by_hand: 'By Hand' };
+  function dependentsText(deps) {
+    var found = [], unread = [];
+    DEPENDENT_KINDS.forEach(function (k) {
+      var v = deps ? deps[k[0]] : undefined;
+      if (!Array.isArray(v)) { unread.push(k[2]); }
+      else if (v.length) { found.push(v.length + ' ' + (v.length === 1 ? k[1] : k[2]) + ' (' + v.map(function (x) { return x.name || x.id; }).join(', ') + ')'); }
+    });
+    if (unread.length === DEPENDENT_KINDS.length) { return 'Not read. Possibly in use'; }
+    return (found.length ? found.join(', ') : 'Nothing found') + (unread.length ? '. Not read, possibly in use: ' + unread.join(', ') : '');
+  }
+  function link(url) { return h('a', { href: url, text: url }); }
+
+  function renderReport(plan, box, on) {
+    box.textContent = '';
+    var date = plan.generated_at.slice(0, 10);
+    var blockers = plan.findings.filter(function (f) { return f.level === 'blocker'; });
+    var reviews = plan.findings.filter(function (f) { return f.level === 'review'; });
+    var laters = plan.findings.filter(function (f) { return f.level === 'later'; });
+    var news = plan.scopes.filter(function (s) { return s.status === 'create'; });
+    var byRef = { root: { short_name: plan.root.short_name } };
+    plan.scopes.forEach(function (s) { byRef[s.ref] = s; });
+
+    box.appendChild(h('h1', { text: 'Secure Workload Scope Plan: ' + (plan.customer.name || 'Customer') }));
+    box.appendChild(h('p', { 'class': 'hint', text: 'Plan version 1, generated ' + date + ' by CSW Scope Builder ' + plan.tool_version + '. Supersedes: any earlier plan for this customer. Built for Secure Workload release 3.10 and later.' }));
+
+    box.appendChild(h('h2', { text: '1. Summary' }));
+    box.appendChild(h('p', { id: 'parent-line', text: 'Parent scope: ' + (plan.root.name || plan.root.short_name) + (plan.source.existing_tree_loaded ? '' : ' (no scope list loaded, so this is a placeholder)') }));
+    if (arr(plan.anchors).length) {
+      box.appendChild(h('p', { id: 'anchor-line', text: 'What the parent scope stands for: ' + plan.anchors.map(function (x) { return LEVEL_WORDS[x.level] + ' = ' + x.value + ' (from the ' + (x.source === 'consultant' ? 'consultant' : x.source + ' of "' + x.scope_name + '"') + ')'; }).join('; ') + '. Those levels are not built again below it.' }));
+    }
+    var counts = plan.actions.counts;
+    box.appendChild(h('p', { id: 'action-line', text: 'Actions: ' + ['create', 'keep', 'rename', 'requery', 'rename_requery', 'remove', 'by_hand', 'leave'].filter(function (k) { return counts[k] || k === 'create'; }).map(function (k) { return counts[k] + ' ' + ACTION_WORDS[k].toLowerCase(); }).join(', ') + '. ' + (plan.actions.need_approval ? plan.actions.approved + ' of ' + plan.actions.need_approval + ' proposed changes to existing scopes are approved. A change that is not approved is not made.' : 'No change to an existing scope is proposed.') }));
+    box.appendChild(h('p', { id: 'verdict', 'class': plan.ready ? 'pass' : 'blocker', text: plan.ready ? 'Ready To Build' : 'Not Ready: Fix The Blockers First' }));
+    box.appendChild(h('p', { text: 'This plan adds ' + news.length + (news.length === 1 ? ' scope' : ' scopes') + ' under "' + (plan.root.name || plan.root.short_name) + '", arranged as ' + plan.layers.join(', then ') + '. It has ' + blockers.length + (blockers.length === 1 ? ' blocker' : ' blockers') + ', ' + reviews.length + (reviews.length === 1 ? ' item' : ' items') + ' to review, and ' + laters.length + (laters.length === 1 ? ' item' : ' items') + ' waiting on information for a later round.' }));
+    box.appendChild(h('p', { text: 'Tenant: ' + (plan.tenant.deployment === 'saas' ? 'SaaS' : (plan.tenant.deployment === 'onprem' ? 'on-premises' : 'not stated')) + ', ' + plan.tenant.license_count + ' workload licenses. Existing scopes loaded: ' + (plan.source.existing_tree_loaded ? plan.source.existing_scope_count : 'none') + '.' }));
+
+    box.appendChild(h('h2', { text: '2. Findings' }));
+    if (!plan.findings.length) { box.appendChild(h('p', { text: 'None.' })); }
+    else {
+      box.appendChild(h('p', { 'class': 'hint', text: 'A blocker stops the build. A review item needs a decision. A later round item is missing information that does not stop this round.' }));
+      box.appendChild(table(['Type', 'Finding'], blockers.concat(reviews, laters).map(function (f) {
+        return [h('span', { 'class': f.level, text: f.level === 'blocker' ? 'Blocker' : (f.level === 'review' ? 'Review' : 'Later Round') }), f.text];
+      })));
+    }
+
+    box.appendChild(h('h2', { text: '3. Scope Tree' }));
+    var kids = {};
+    plan.scopes.forEach(function (s) { (kids[s.parent_ref] = kids[s.parent_ref] || []).push(s); });
+    function branch(ref) {
+      var ul = h('ul');
+      arr(kids[ref]).forEach(function (s) {
+        var li = h('li', null, [s.short_name, h('span', { 'class': 'tag ' + (s.status === 'create' ? 'new' : (s.status === 'conflict' || s.status === 'rename' || s.action === 'remove' || s.action === 'by_hand' ? 'conflict' : '')), text: s.status === 'outside' ? (s.action === 'leave' ? 'Not in this plan' : (s.action === 'remove' ? 'To remove' : 'By hand')) : statusText(s.status) })]);
+        if (kids[s.ref]) { li.appendChild(branch(s.ref)); }
+        ul.appendChild(li);
+      });
+      return ul;
+    }
+    var top = h('ul', { 'class': 'tree' }, [h('li', null, [plan.root.short_name, h('span', { 'class': 'tag', text: 'Top-level scope' }), branch('root')])]);
+    box.appendChild(top);
+
+    box.appendChild(h('h2', { text: '4. Changes To Existing Scopes' }));
+    var touched = plan.scopes.filter(function (x) { return x.action !== 'create' && x.action !== 'keep'; });
+    if (!plan.source.existing_tree_loaded) { box.appendChild(h('p', { id: 'changes-none', text: 'No scope list was loaded, so no existing scope is touched.' })); }
+    else if (!touched.length) { box.appendChild(h('p', { id: 'changes-none', text: 'None. Every existing scope below the parent is kept as it is.' })); }
+    else {
+      box.appendChild(h('p', { 'class': 'hint', text: 'Nothing here is done unless its box is ticked, and then only when the customer adds --allow-changes or --allow-removals and types yes. A top-level scope is never changed. A scope cannot be moved to a different parent.' }));
+      var tick = function (kind, item, checked, label) {
+        var input = h('input', { type: 'checkbox', id: kind + '-' + item.before.id, 'aria-label': label + ': ' + item.full_name });
+        input.checked = !!checked;
+        if (on) { input.addEventListener('change', function () { on(kind, item.before.id, input.checked); }); } else { input.disabled = true; }
+        return input;
+      };
+      var groups = [
+        ['Rename', touched.filter(function (x) { return x.action === 'rename' || x.action === 'rename_requery'; }), 'Approved'],
+        ['Change Query', touched.filter(function (x) { return x.action === 'requery'; }), 'Approved'],
+        ['Remove', touched.filter(function (x) { return x.action === 'remove'; }), 'Approved'],
+        ['By Hand', touched.filter(function (x) { return x.action === 'by_hand'; }), ''],
+        ['Not In This Plan (Left Alone)', touched.filter(function (x) { return x.action === 'leave'; }), '']];
+      groups.forEach(function (g) {
+        if (!g[1].length) { return; }
+        box.appendChild(h('h3', { text: g[0] }));
+        var heads = ['Scope', 'Before', 'After', 'What Depends On It'].concat(g[2] ? [g[2]] : []).concat(g[0] === 'Rename' || g[0] === 'Change Query' ? [] : ['Marked For Removal']);
+        var wrap = table(heads, g[1].map(function (x) {
+          var before = '"' + x.before.short_name + '": ' + describeQuery(x.before.short_query), after;
+          if (x.action === 'remove') { after = 'Removed'; }
+          else if (x.action === 'by_hand') { after = 'Not changed by this tool. ' + (x.reason || ''); }
+          else if (x.action === 'leave') { after = 'Unchanged'; }
+          else { after = '"' + x.after.short_name + '": ' + describeQuery(x.after.short_query); }
+          var row = [x.full_name, before, after, dependentsText(x.dependents)];
+          if (g[2]) { row.push(tick('approve', x, x.approved, 'Approve')); }
+          if (g[0] !== 'Rename' && g[0] !== 'Change Query') { row.push(tick('remove', x, x.action !== 'leave', 'Mark for removal')); }
+          return row;
+        }));
+        wrap.setAttribute('data-group', g[0]);
+        box.appendChild(wrap);
+      });
+    }
+
+    box.appendChild(h('h2', { text: '5. Scopes In Build Order' }));
+    box.appendChild(h('p', { 'class': 'hint', text: 'Each scope also inherits its parent\'s query, so only its own condition is shown.' }));
+    box.appendChild(table(['Order', 'Scope', 'Parent', 'Query', 'Status'], plan.scopes.filter(function (s) { return s.status !== 'outside'; }).map(function (s) {
+      return [s.order, s.short_name, byRef[s.parent_ref].short_name, describeQuery(s.action === 'requery' ? s.before.short_query : s.short_query), statusText(s.status)];
+    })));
+
+    box.appendChild(h('h2', { text: '6. Label Plan' }));
+    box.appendChild(table(['Label', 'Values', 'Used In Scope Queries'], plan.labels.map(function (l) { return [l.key, l.values.join(', ') || 'none yet', l.used_in_scope_queries ? 'Yes' : 'No']; })));
+    box.appendChild(h('p', { text: 'Scope queries use labels uploaded to Secure Workload. Its API names an uploaded label with the prefix user_, for example user_Environment.' }));
+    if (!plan.ready) { box.appendChild(h('p', { 'class': 'blocker', text: 'The label file cannot be downloaded until the blockers are fixed.' })); }
+    box.appendChild(h('p', { text: 'The label file holds ' + plan.label_rows.length + (plan.label_rows.length === 1 ? ' row' : ' rows') + ' with the columns ' + plan.label_columns.join(', ') + '.' }));
+
+    box.appendChild(h('h2', { text: '7. Limit Checks' }));
+    box.appendChild(table(['Check', 'This Plan', 'Limit', 'Result', 'Note'], plan.checks.map(function (c) {
+      return [c.name, c.value, c.limit, h('span', { 'class': c.result === 'pass' ? 'pass' : (c.result === 'fail' ? 'blocker' : 'review'), text: c.result === 'pass' ? 'Pass' : (c.result === 'fail' ? 'Fail' : 'Not checked') }), c.note];
+    })));
+
+    box.appendChild(h('h2', { text: '8. Customer To-Do List' }));
+    var ol = h('ol');
+    plan.todo.forEach(function (t) { ol.appendChild(h('li', { text: t })); });
+    box.appendChild(plan.todo.length ? ol : h('p', { text: 'Nothing to do.' }));
+
+    box.appendChild(h('h2', { text: '9. Design Rules And References' }));
+    var rules = h('ol');
+    ['The children of any one scope are all defined by the same label, and every workload carries exactly one value for it. This keeps sibling scopes from overlapping.',
+     'The default tree is the top-level scope, then Environment, then Application.',
+     'Shared services sit under an Environment value of ' + SHARED + ', with one child scope for each service.',
+     'A Location level is added only when a team divides its responsibility by site or cloud.',
+     'Regulated zones are a label. They become a level only when a separate team owns policy for a zone.',
+     'The tree stops at four levels below the top-level scope.',
+     'Applications identified by subnet get a label file, so scope queries still use labels.',
+     'A change to an existing scope is only ever proposed. Nothing is renamed, changed, or removed unless the consultant approves it in the plan and the customer allows it when building.',
+     'A top-level scope is never changed, and a scope is never moved to a different parent.',
+     'Missing information does not stop the plan. What is known is built now, and the rest is added in a later round.'
+    ].forEach(function (r) { rules.appendChild(h('li', { text: r })); });
+    box.appendChild(rules);
+    var refs = h('ul');
+    [['Scope Design Principles', REFS.principles], ['General Process For Implementing Microsegmentation', REFS.process], ['Configuration Limits', REFS.limits39], ['Secure Workload Platform Datasheet', REFS.datasheet], ['Label Limits', REFS.labelLimits], ['Guidelines For Uploading Label Files', REFS.labelFile], ['Label Key Schema', REFS.labelSchema], ['Commit Changes', REFS.commit]
+    ].forEach(function (r) { refs.appendChild(h('li', null, [r[0] + ': ', link(r[1])])); });
+    box.appendChild(refs);
+    box.appendChild(h('p', { 'class': 'hint', text: 'Ctrl+F keywords: scope tree, scope design principles, label file, user defined label upload, commit changes, configuration limits, label limits.' }));
+    box.hidden = false;
+  }
+
+  /* ---------- page wiring ---------- */
+  var answersDoc = null, existingList = null, existingPartial = false, existingColumns = null, existingChildCount = null, plan = null, pickedByHand = false;
+  var anchorChoices = {}, anchorsForRoot = null, changeChoices = { approved: {}, remove: {} }, existingDependents = null;
+  function onChange(kind, id, checked) {
+    if (kind === 'approve') { if (checked) { changeChoices.approved[id] = true; } else { delete changeChoices.approved[id]; } }
+    else { if (checked) { changeChoices.remove[id] = true; } else { delete changeChoices.remove[id]; delete changeChoices.approved[id]; } }
+    rebuild();
+  }
+  function renderAnchors() {
+    var box = document.getElementById('anchor-box'), rows = document.getElementById('anchor-rows');
+    rows.textContent = '';
+    box.hidden = !(plan && plan.ui.hasParent);
+    if (box.hidden) { return; }
+    plan.ui.anchorRows.forEach(function (row) {
+      var line = h('div', { 'class': 'anchor-row' });
+      var id = 'anchor-' + row.level;
+      line.appendChild(h('label', { 'class': 'lvl', 'for': id, text: row.word }));
+      var sel = h('select', { id: id });
+      sel.appendChild(h('option', { value: '', text: 'Not set' }));
+      row.options.forEach(function (v) { sel.appendChild(h('option', { value: v, text: v })); });
+      if (row.value && row.options.indexOf(row.value) < 0) { sel.appendChild(h('option', { value: row.value, text: row.value })); }
+      sel.value = row.value || '';
+      sel.addEventListener('change', function () { anchorChoices[row.level] = { value: sel.value, confirmed: true }; rebuild(); });
+      line.appendChild(sel);
+      if (row.state === 'pending') {
+        var btn = h('button', { type: 'button', id: id + '-confirm', text: 'Confirm' });
+        btn.addEventListener('click', function () { anchorChoices[row.level] = { value: row.value, confirmed: true }; rebuild(); });
+        line.appendChild(btn);
+        line.appendChild(h('span', { 'class': 'why blocker', text: 'Proposed from the ' + row.proposed.source + ' of "' + row.proposed.scope_name + '". Confirm it or choose Not set.' }));
+      } else if (row.state === 'confirmed') {
+        line.appendChild(h('span', { 'class': 'why pass', text: 'Confirmed' }));
+      } else if (row.state === 'cleared') {
+        line.appendChild(h('span', { 'class': 'why', text: 'Cleared. The proposal was ' + row.proposed.value + '.' }));
+      }
+      rows.appendChild(line);
+    });
+  }
+  function syncPicker() {
+    if (pickedByHand || !answersDoc || !existingList) { return; }
+    var want = findRequested(existingList, ((answersDoc.answers || {}).tenant || {}).build_under);
+    if (want) { document.getElementById('root-sel').value = want.id; }
+  }
+  function baseName(kind, ext) {
+    var who = (plan && plan.customer.name) ? safeName(plan.customer.name) : 'Customer';
+    return plan.generated_at.slice(0, 10) + ' ' + who + ' - CSW ' + kind + ext;
+  }
+  function save(name, text, type) {
+    var blob = new Blob([text], { type: type });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  }
+  function setMsg(t) { var m = document.getElementById('msg'); m.textContent = t || ''; m.hidden = !t; }
+  function rebuild() {
+    var report = document.getElementById('report');
+    ['b-labels', 'b-plan', 'b-print'].forEach(function (id) { document.getElementById(id).disabled = true; });
+    if (!answersDoc) { report.hidden = true; plan = null; renderAnchors(); return; }
+    var sel = document.getElementById('root-sel');
+    var labelNames = {};
+    LABEL_KEYS.forEach(function (k) { labelNames[k] = document.getElementById('ln-' + k).value; });
+    syncPicker();
+    var build = function () {
+      return buildPlan(answersDoc, existingList, { rootId: (pickedByHand && sel.value) ? sel.value : undefined, partial: existingPartial, labelColumns: existingColumns, tenantChildCount: existingChildCount, labelNames: labelNames, anchors: anchorChoices, changes: changeChoices, dependents: existingDependents });
+    };
+    plan = build();
+    if ((plan.root.existing_id || null) !== anchorsForRoot) {
+      /* a different parent: earlier choices about what the parent stands for no longer apply */
+      anchorsForRoot = plan.root.existing_id || null; anchorChoices = {}; changeChoices = { approved: {}, remove: {} };
+      plan = build();
+    }
+    if (plan.root.existing_id) { sel.value = plan.root.existing_id; }
+    renderAnchors();
+    renderReport(plan, report, onChange);
+    document.title = baseName('Scope Plan', '');
+    document.getElementById('b-plan').disabled = false;
+    document.getElementById('b-print').disabled = false;
+    document.getElementById('b-labels').disabled = plan.label_rows.length === 0 || !plan.ready;
+  }
+  function readJson(file, cb) {
+    var fr = new FileReader();
+    fr.onload = function () { var d; try { d = JSON.parse(String(fr.result)); } catch (e) { cb(null); return; } cb(d); };
+    fr.readAsText(file);
+  }
+  function loadAnswers(d) {
+    if (!d || d.schema !== ANSWERS_SCHEMA || !d.answers) { answersDoc = null; return 'That is not an answers file saved from the questionnaire.'; }
+    if (Number(d.schema_version) > ANSWERS_MAX_VERSION) { answersDoc = null; return 'The answers file is too new for this planner: it uses answers format ' + d.schema_version + ' and this planner understands up to ' + ANSWERS_MAX_VERSION + '. Open the current planner page and load it there.'; }
+    answersDoc = d; return '';
+  }
+  function loadExisting(d) {
+    var list = normalizeExisting(d);
+    var pick = document.getElementById('root-pick'), sel = document.getElementById('root-sel');
+    sel.textContent = ''; pick.hidden = true;
+    if (d && d.schema === EXPORT_SCHEMA && Number(d.schema_version) > EXPORT_MAX_VERSION) { existingList = null; existingColumns = null; existingChildCount = null; return 'The scope list file is too new for this planner: it uses export format ' + d.schema_version + ' and this planner understands up to ' + EXPORT_MAX_VERSION + '. Open the current planner page and load it there.'; }
+    if (!list || !list.length || !list.every(function (s) { return s && typeof s === 'object' && s.id && (s.short_name || s.name); })) { existingList = null; existingColumns = null; existingChildCount = null; return 'That is not a scope list saved by the export program.'; }
+    existingList = list;
+    pickedByHand = false;
+    existingPartial = !!(d && d.partial === true);
+    existingColumns = (d && Array.isArray(d.label_columns)) ? d.label_columns : null;
+    existingChildCount = (d && typeof d.tenant_child_scope_count === 'number') ? d.tenant_child_scope_count : null;
+    existingDependents = (d && d.dependents && typeof d.dependents === 'object') ? d.dependents : null;
+    anchorChoices = {}; anchorsForRoot = null; changeChoices = { approved: {}, remove: {} };
+    var roots = existingRoots(list);
+    var topId = roots.length ? roots[0].id : '';
+    list.slice().sort(function (p, q) { return String(p.name || p.short_name).localeCompare(String(q.name || q.short_name)); }).forEach(function (r) {
+      var o = h('option', { value: r.id, text: r.name || r.short_name });
+      if (r.id === topId) { o.selected = true; }
+      sel.appendChild(o);
+    });
+    pick.hidden = false;
+    return '';
+  }
+  function init() {
+    document.getElementById('f-answers').addEventListener('change', function (e) {
+      var f = e.target.files && e.target.files[0]; if (!f) { return; }
+      readJson(f, function (d) { setMsg(loadAnswers(d)); rebuild(); });
+    });
+    document.getElementById('f-existing').addEventListener('change', function (e) {
+      var f = e.target.files && e.target.files[0];
+      if (!f) { existingList = null; existingColumns = null; existingChildCount = null; existingDependents = null; anchorChoices = {}; anchorsForRoot = null; changeChoices = { approved: {}, remove: {} }; document.getElementById('root-pick').hidden = true; rebuild(); return; }
+      readJson(f, function (d) { setMsg(loadExisting(d)); rebuild(); });
+    });
+    document.getElementById('root-sel').addEventListener('change', function () { pickedByHand = true; rebuild(); });
+    LABEL_KEYS.forEach(function (k) { document.getElementById('ln-' + k).addEventListener('input', rebuild); });
+    document.getElementById('b-labels').addEventListener('click', function () { save(baseName('Labels', '.csv'), labelCsv(plan), 'text/csv'); });
+    document.getElementById('b-plan').addEventListener('click', function () { save(baseName('Scope Plan', '.json'), JSON.stringify(plan, null, 2), 'application/json'); });
+    document.getElementById('b-print').addEventListener('click', function () { window.print(); });
+  }
+
+  window.CSWPlanner = { TOOL_VERSION: TOOL_VERSION, sameQuery: sameQuery, sameName: sameName, safeName: safeName, describeQuery: describeQuery, canonical: canonical, planFingerprint: planFingerprint, sha256Hex: sha256Hex, buildPlan: buildPlan, labelCsv: labelCsv, renderReport: renderReport, parseToken: parseToken, loadAnswers: loadAnswers, loadExisting: loadExisting, rebuild: rebuild, getPlan: function () { return plan; } };
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); } else { init(); }
+})();
+</script>
+</body>
+</html>

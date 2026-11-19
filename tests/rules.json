@@ -1,0 +1,1062 @@
+{
+ "about": "Shared rule tables. Read by tests/test_planner.cjs and tests/test_helper.py so the planner and the helper cannot drift apart.",
+ "comparison": [
+  {
+   "a": {
+    "type": "eq",
+    "field": "user_Environment",
+    "value": "Production"
+   },
+   "b": {
+    "type": "eq",
+    "field": "user_Environment",
+    "value": "Production"
+   },
+   "same": true,
+   "exact": true
+  },
+  {
+   "a": {
+    "type": "eq",
+    "field": "user_Environment",
+    "value": "production"
+   },
+   "b": {
+    "type": "eq",
+    "field": "user_Environment",
+    "value": "Production"
+   },
+   "same": true,
+   "exact": false
+  },
+  {
+   "a": {
+    "type": "eq",
+    "field": "user_environment",
+    "value": "PRODUCTION"
+   },
+   "b": {
+    "type": "eq",
+    "field": "user_Environment",
+    "value": "Production"
+   },
+   "same": true,
+   "exact": false
+  },
+  {
+   "a": {
+    "type": "eq",
+    "field": "user_Environment",
+    "value": "Production"
+   },
+   "b": {
+    "type": "eq",
+    "field": "user_Environment",
+    "value": "Test"
+   },
+   "same": false,
+   "exact": false
+  },
+  {
+   "a": {
+    "type": "eq",
+    "field": "user_Environment",
+    "value": "Production"
+   },
+   "b": {
+    "type": "eq",
+    "field": "user_Application",
+    "value": "Production"
+   },
+   "same": false,
+   "exact": false
+  },
+  {
+   "a": {
+    "type": "eq",
+    "field": "ip",
+    "value": "10.0.0.1"
+   },
+   "b": {
+    "type": "eq",
+    "field": "ip",
+    "value": "10.0.0.1"
+   },
+   "same": true,
+   "exact": true
+  },
+  {
+   "a": {
+    "type": "eq",
+    "field": "hostname",
+    "value": "Web01"
+   },
+   "b": {
+    "type": "eq",
+    "field": "hostname",
+    "value": "web01"
+   },
+   "same": false,
+   "exact": false
+  },
+  {
+   "a": {
+    "type": "subnet",
+    "field": "ip",
+    "value": "10.0.0.0/8"
+   },
+   "b": {
+    "type": "eq",
+    "field": "user_Environment",
+    "value": "Production"
+   },
+   "same": false,
+   "exact": false
+  },
+  {
+   "a": {
+    "type": "contains",
+    "field": "user_Environment",
+    "value": "production"
+   },
+   "b": {
+    "type": "contains",
+    "field": "user_Environment",
+    "value": "Production"
+   },
+   "same": false,
+   "exact": false
+  },
+  {
+   "a": {
+    "type": "and",
+    "filters": [
+     {
+      "type": "eq",
+      "field": "user_Environment",
+      "value": "Production"
+     }
+    ]
+   },
+   "b": {
+    "type": "eq",
+    "field": "user_Environment",
+    "value": "Production"
+   },
+   "same": true,
+   "exact": false
+  },
+  {
+   "a": "{\"type\":\"eq\",\"field\":\"user_Environment\",\"value\":\"Production\"}",
+   "b": {
+    "type": "eq",
+    "field": "user_Environment",
+    "value": "Production"
+   },
+   "same": true,
+   "exact": true
+  },
+  {
+   "a": null,
+   "b": {
+    "type": "eq",
+    "field": "user_Environment",
+    "value": "Production"
+   },
+   "same": false,
+   "exact": false
+  }
+ ],
+ "names": [
+  {
+   "a": "Production",
+   "b": "Production",
+   "same": true,
+   "exact": true
+  },
+  {
+   "a": "production",
+   "b": "Production",
+   "same": true,
+   "exact": false
+  },
+  {
+   "a": "Production ",
+   "b": "Production",
+   "same": false,
+   "exact": false
+  },
+  {
+   "a": "Prod",
+   "b": "Production",
+   "same": false,
+   "exact": false
+  }
+ ],
+ "file_names": [
+  {
+   "in": "a/b:c*?\"<>|",
+   "out": "abc"
+  },
+  {
+   "in": "  Acme Corp. ",
+   "out": "Acme Corp"
+  },
+  {
+   "in": "CON",
+   "out": "CON scope"
+  },
+  {
+   "in": "nul.txt",
+   "out": "nul.txt scope"
+  },
+  {
+   "in": "",
+   "out": "Tenant"
+  },
+  {
+   "in": "...",
+   "out": "Tenant"
+  },
+  {
+   "in": "Café 東京",
+   "out": "Café 東京"
+  },
+  {
+   "in": "tab\there",
+   "out": "tabhere"
+  }
+ ],
+ "fingerprint": {
+  "scopes": [
+   {
+    "order": 2,
+    "ref": "s2",
+    "parent_ref": "s1",
+    "short_name": "Payroll é",
+    "short_query": {
+     "type": "eq",
+     "field": "user_Application",
+     "value": "Payroll é"
+    }
+   },
+   {
+    "order": 1,
+    "ref": "s1",
+    "parent_ref": "root",
+    "short_name": "Production",
+    "short_query": {
+     "type": "eq",
+     "field": "user_Environment",
+     "value": "Production"
+    }
+   },
+   {
+    "order": 3,
+    "ref": "s3",
+    "parent_ref": "root",
+    "short_name": "Shared",
+    "short_query": {
+     "type": "eq",
+     "field": "user_Environment",
+     "value": "Shared"
+    }
+   }
+  ],
+  "sha256": "520d6a80e136f06250969b63d4461cdfd9d04b824365eff95084fa6db2ecd748"
+ },
+ "equivalence": [
+  {
+   "a": {
+    "type": "and",
+    "filters": [
+     {
+      "type": "eq",
+      "field": "user_Environment",
+      "value": "Production"
+     },
+     {
+      "type": "subnet",
+      "field": "ip",
+      "value": "10.0.0.0/8"
+     }
+    ]
+   },
+   "b": {
+    "type": "and",
+    "filters": [
+     {
+      "type": "subnet",
+      "field": "ip",
+      "value": "10.0.0.0/8"
+     },
+     {
+      "type": "eq",
+      "field": "user_Environment",
+      "value": "Production"
+     }
+    ]
+   },
+   "same": true,
+   "exact": false
+  },
+  {
+   "a": {
+    "type": "or",
+    "filters": [
+     {
+      "type": "eq",
+      "field": "user_App",
+      "value": "a"
+     },
+     {
+      "type": "eq",
+      "field": "user_App",
+      "value": "b"
+     }
+    ]
+   },
+   "b": {
+    "type": "or",
+    "filters": [
+     {
+      "type": "eq",
+      "field": "user_app",
+      "value": "B"
+     },
+     {
+      "type": "eq",
+      "field": "user_APP",
+      "value": "A"
+     }
+    ]
+   },
+   "same": true,
+   "exact": false
+  },
+  {
+   "a": {
+    "type": "and",
+    "filters": [
+     {
+      "type": "eq",
+      "field": "user_App",
+      "value": "a"
+     },
+     {
+      "type": "eq",
+      "field": "user_App",
+      "value": "b"
+     }
+    ]
+   },
+   "b": {
+    "type": "or",
+    "filters": [
+     {
+      "type": "eq",
+      "field": "user_App",
+      "value": "a"
+     },
+     {
+      "type": "eq",
+      "field": "user_App",
+      "value": "b"
+     }
+    ]
+   },
+   "same": false,
+   "exact": false
+  },
+  {
+   "a": {
+    "type": "or",
+    "filters": [
+     {
+      "type": "eq",
+      "field": "ip",
+      "value": "10.0.0.1"
+     }
+    ]
+   },
+   "b": {
+    "type": "eq",
+    "field": "ip",
+    "value": "10.0.0.1"
+   },
+   "same": true,
+   "exact": false
+  },
+  {
+   "a": {
+    "type": "and",
+    "filters": [
+     {
+      "type": "or",
+      "filters": [
+       {
+        "type": "eq",
+        "field": "user_App",
+        "value": "b"
+       },
+       {
+        "type": "eq",
+        "field": "user_App",
+        "value": "a"
+       }
+      ]
+     },
+     {
+      "type": "eq",
+      "field": "user_Env",
+      "value": "Prod"
+     }
+    ]
+   },
+   "b": {
+    "type": "and",
+    "filters": [
+     {
+      "type": "eq",
+      "field": "user_env",
+      "value": "prod"
+     },
+     {
+      "type": "or",
+      "filters": [
+       {
+        "type": "eq",
+        "field": "user_App",
+        "value": "a"
+       },
+       {
+        "type": "eq",
+        "field": "user_App",
+        "value": "b"
+       }
+      ]
+     }
+    ]
+   },
+   "same": true,
+   "exact": false
+  },
+  {
+   "a": {
+    "type": "not",
+    "filter": {
+     "type": "and",
+     "filters": [
+      {
+       "type": "eq",
+       "field": "user_App",
+       "value": "a"
+      }
+     ]
+    }
+   },
+   "b": {
+    "type": "not",
+    "filter": {
+     "type": "eq",
+     "field": "user_app",
+     "value": "A"
+    }
+   },
+   "same": true,
+   "exact": false
+  },
+  {
+   "a": {
+    "type": "not",
+    "filter": {
+     "type": "eq",
+     "field": "user_App",
+     "value": "a"
+    }
+   },
+   "b": {
+    "type": "eq",
+    "field": "user_App",
+    "value": "a"
+   },
+   "same": false,
+   "exact": false
+  },
+  {
+   "a": {
+    "type": "in",
+    "field": "user_App",
+    "values": [
+     "a",
+     "b"
+    ]
+   },
+   "b": {
+    "type": "in",
+    "field": "user_App",
+    "values": [
+     "b",
+     "a"
+    ]
+   },
+   "same": false,
+   "exact": false
+  },
+  {
+   "a": {
+    "type": "in",
+    "field": "user_App",
+    "values": [
+     "a",
+     "b"
+    ]
+   },
+   "b": {
+    "type": "in",
+    "field": "user_App",
+    "values": [
+     "a",
+     "b"
+    ]
+   },
+   "same": true,
+   "exact": true
+  },
+  {
+   "a": {
+    "type": "ne",
+    "field": "user_App",
+    "value": "a"
+   },
+   "b": {
+    "type": "ne",
+    "field": "user_App",
+    "value": "A"
+   },
+   "same": false,
+   "exact": false
+  },
+  {
+   "a": {
+    "type": "mystery",
+    "field": "user_App",
+    "value": "a",
+    "extra": 1
+   },
+   "b": {
+    "type": "mystery",
+    "field": "user_App",
+    "value": "a",
+    "extra": 1
+   },
+   "same": true,
+   "exact": true
+  },
+  {
+   "a": {
+    "type": "mystery",
+    "field": "user_App",
+    "value": "a"
+   },
+   "b": {
+    "type": "mystery",
+    "field": "user_App",
+    "value": "A"
+   },
+   "same": false,
+   "exact": false
+  },
+  {
+   "a": {
+    "type": "and",
+    "filters": [
+     {
+      "type": "mystery",
+      "x": [
+       2,
+       1
+      ]
+     },
+     {
+      "type": "eq",
+      "field": "user_App",
+      "value": "a"
+     }
+    ]
+   },
+   "b": {
+    "type": "and",
+    "filters": [
+     {
+      "type": "eq",
+      "field": "user_app",
+      "value": "A"
+     },
+     {
+      "type": "mystery",
+      "x": [
+       2,
+       1
+      ]
+     }
+    ]
+   },
+   "same": true,
+   "exact": false
+  },
+  {
+   "a": {
+    "type": "and",
+    "filters": [
+     {
+      "type": "mystery",
+      "x": [
+       2,
+       1
+      ]
+     },
+     {
+      "type": "eq",
+      "field": "user_App",
+      "value": "a"
+     }
+    ]
+   },
+   "b": {
+    "type": "and",
+    "filters": [
+     {
+      "type": "eq",
+      "field": "user_app",
+      "value": "A"
+     },
+     {
+      "type": "mystery",
+      "x": [
+       1,
+       2
+      ]
+     }
+    ]
+   },
+   "same": false,
+   "exact": false
+  },
+  {
+   "a": {
+    "type": "and",
+    "filters": [
+     {
+      "type": "eq",
+      "field": "user_App",
+      "value": "a"
+     },
+     {
+      "type": "and",
+      "filters": [
+       {
+        "type": "eq",
+        "field": "user_Env",
+        "value": "p"
+       },
+       {
+        "type": "eq",
+        "field": "ip",
+        "value": "1.1.1.1"
+       }
+      ]
+     }
+    ]
+   },
+   "b": {
+    "type": "and",
+    "filters": [
+     {
+      "type": "eq",
+      "field": "user_App",
+      "value": "a"
+     },
+     {
+      "type": "eq",
+      "field": "user_Env",
+      "value": "p"
+     },
+     {
+      "type": "eq",
+      "field": "ip",
+      "value": "1.1.1.1"
+     }
+    ]
+   },
+   "same": false,
+   "exact": false
+  },
+  {
+   "a": "{\"type\":\"and\",\"filters\":[{\"type\":\"eq\",\"field\":\"ip\",\"value\":\"10.0.0.1\"},{\"type\":\"eq\",\"field\":\"hostname\",\"value\":\"a\"}]}",
+   "b": {
+    "type": "and",
+    "filters": [
+     {
+      "type": "eq",
+      "field": "hostname",
+      "value": "a"
+     },
+     {
+      "type": "eq",
+      "field": "ip",
+      "value": "10.0.0.1"
+     }
+    ]
+   },
+   "same": true,
+   "exact": false
+  },
+  {
+   "a": {
+    "type": "eq",
+    "field": "hostname",
+    "value": "Web01"
+   },
+   "b": {
+    "type": "eq",
+    "field": "hostname",
+    "value": "web01"
+   },
+   "same": false,
+   "exact": false
+  },
+  {
+   "a": {
+    "type": "eq",
+    "field": "user_App",
+    "value": "a",
+    "note": "x"
+   },
+   "b": {
+    "type": "eq",
+    "field": "user_App",
+    "value": "A"
+   },
+   "same": false,
+   "exact": false
+  }
+ ],
+ "describe": [
+  {
+   "q": {
+    "type": "and",
+    "filters": [
+     {
+      "type": "eq",
+      "field": "user_Environment",
+      "value": "Production"
+     },
+     {
+      "type": "subnet",
+      "field": "ip",
+      "value": "10.0.0.0/8"
+     }
+    ]
+   },
+   "text": "Environment is Production and address is in 10.0.0.0/8"
+  },
+  {
+   "q": {
+    "type": "eq",
+    "field": "user_Application",
+    "value": "Payroll"
+   },
+   "text": "Application is Payroll"
+  },
+  {
+   "q": "{\"type\":\"eq\",\"field\":\"user_Application\",\"value\":\"Payroll\"}",
+   "text": "Application is Payroll"
+  },
+  {
+   "q": {
+    "type": "ne",
+    "field": "hostname",
+    "value": "web01"
+   },
+   "text": "hostname is not web01"
+  },
+  {
+   "q": {
+    "type": "contains",
+    "field": "hostname",
+    "value": "db"
+   },
+   "text": "hostname contains db"
+  },
+  {
+   "q": {
+    "type": "regex",
+    "field": "hostname",
+    "value": "^web[0-9]+$"
+   },
+   "text": "hostname matches the pattern ^web[0-9]+$"
+  },
+  {
+   "q": {
+    "type": "in",
+    "field": "user_Tier",
+    "values": [
+     "web",
+     "app"
+    ]
+   },
+   "text": "Tier is one of web, app"
+  },
+  {
+   "q": {
+    "type": "range",
+    "field": "vrf_id",
+    "values": [
+     1,
+     5
+    ]
+   },
+   "text": "VRF ID is between 1 and 5"
+  },
+  {
+   "q": {
+    "type": "gte",
+    "field": "os_version",
+    "value": 7
+   },
+   "text": "os_version is at least 7"
+  },
+  {
+   "q": {
+    "type": "lt",
+    "field": "os_version",
+    "value": 7
+   },
+   "text": "os_version is less than 7"
+  },
+  {
+   "q": {
+    "type": "lte",
+    "field": "os_version",
+    "value": 7
+   },
+   "text": "os_version is at most 7"
+  },
+  {
+   "q": {
+    "type": "gt",
+    "field": "os_version",
+    "value": 7
+   },
+   "text": "os_version is greater than 7"
+  },
+  {
+   "q": {
+    "type": "eq",
+    "field": "os",
+    "value": "linux"
+   },
+   "text": "operating system is linux"
+  },
+  {
+   "q": {
+    "type": "or",
+    "filters": [
+     {
+      "type": "eq",
+      "field": "user_App",
+      "value": "a"
+     },
+     {
+      "type": "and",
+      "filters": [
+       {
+        "type": "eq",
+        "field": "user_App",
+        "value": "b"
+       },
+       {
+        "type": "subnet",
+        "field": "ip",
+        "value": "10.1.0.0/16"
+       }
+      ]
+     }
+    ]
+   },
+   "text": "App is a or (App is b and address is in 10.1.0.0/16)"
+  },
+  {
+   "q": {
+    "type": "not",
+    "filter": {
+     "type": "or",
+     "filters": [
+      {
+       "type": "eq",
+       "field": "user_App",
+       "value": "a"
+      },
+      {
+       "type": "eq",
+       "field": "user_App",
+       "value": "b"
+      }
+     ]
+    }
+   },
+   "text": "not (App is a or App is b)"
+  },
+  {
+   "q": {
+    "type": "and",
+    "filters": [
+     {
+      "type": "not",
+      "filter": {
+       "type": "eq",
+       "field": "user_App",
+       "value": "a"
+      }
+     },
+     {
+      "type": "eq",
+      "field": "user_Env",
+      "value": "p"
+     }
+    ]
+   },
+   "text": "not (App is a) and Env is p"
+  },
+  {
+   "q": {
+    "type": "and",
+    "filters": [
+     {
+      "type": "eq",
+      "field": "user_App",
+      "value": "a"
+     }
+    ]
+   },
+   "text": "App is a"
+  },
+  {
+   "q": {
+    "type": "mystery",
+    "value": "a",
+    "field": "user_App"
+   },
+   "text": "{\"field\":\"user_App\",\"type\":\"mystery\",\"value\":\"a\"}"
+  },
+  {
+   "q": {
+    "type": "and",
+    "filters": [
+     {
+      "type": "eq",
+      "field": "user_App",
+      "value": "a"
+     },
+     {
+      "type": "mystery",
+      "x": 1
+     }
+    ]
+   },
+   "text": "{\"filters\":[{\"field\":\"user_App\",\"type\":\"eq\",\"value\":\"a\"},{\"type\":\"mystery\",\"x\":1}],\"type\":\"and\"}"
+  },
+  {
+   "q": {
+    "type": "range",
+    "field": "vrf_id",
+    "values": [
+     1
+    ]
+   },
+   "text": "{\"field\":\"vrf_id\",\"type\":\"range\",\"values\":[1]}"
+  },
+  {
+   "q": "not json",
+   "text": "not json"
+  }
+ ],
+ "fingerprint_v3": {
+  "scopes": [
+   {
+    "order": 1,
+    "ref": "s1",
+    "parent_ref": "root",
+    "short_name": "Production",
+    "short_query": {
+     "type": "eq",
+     "field": "user_Environment",
+     "value": "Production"
+    },
+    "action": "keep",
+    "approved": false,
+    "before": {
+     "id": "a1"
+    }
+   },
+   {
+    "order": 2,
+    "ref": "s2",
+    "parent_ref": "s1",
+    "short_name": "Payroll",
+    "short_query": {
+     "type": "and",
+     "filters": [
+      {
+       "type": "eq",
+       "field": "user_Application",
+       "value": "Payroll"
+      },
+      {
+       "type": "subnet",
+       "field": "ip",
+       "value": "10.0.0.0/8"
+      }
+     ]
+    },
+    "action": "requery",
+    "approved": true,
+    "before": {
+     "id": "a2"
+    }
+   },
+   {
+    "order": 3,
+    "ref": "s3",
+    "parent_ref": "s1",
+    "short_name": "Café",
+    "short_query": {
+     "type": "eq",
+     "field": "user_Application",
+     "value": "Café"
+    },
+    "action": "create",
+    "approved": false
+   },
+   {
+    "order": 4,
+    "ref": "x1",
+    "parent_ref": "root",
+    "short_name": "Old",
+    "short_query": {
+     "type": "eq",
+     "field": "ip",
+     "value": "10.0.0.1"
+    },
+    "action": "remove",
+    "approved": false,
+    "before": {
+     "id": "a9"
+    }
+   }
+  ],
+  "sha256": "6aab7f1b54805ee637b99628c31fbc72f8fd4f8db34c2a65c50a2843512cc253",
+  "sha256_when_the_removal_is_approved": "8f9e25e23f05ab0e1019befdcb84fa0b1b44c3f416c3a677b291b528ecd51aea"
+ }
+}

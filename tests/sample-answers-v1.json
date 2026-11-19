@@ -1,0 +1,105 @@
+{
+  "schema": "csw-scope-interview",
+  "schema_version": 1,
+  "complete": true,
+  "saved_at": "2026-11-19T12:13:21.582Z",
+  "answers": {
+    "customer": {
+      "name": "acme",
+      "contact_name": "acme nME",
+      "contact_email": "acme@company.com"
+    },
+    "tenant": {
+      "deployment": "saas",
+      "release": "",
+      "license_count": 500,
+      "existing_tree": false,
+      "kubernetes": false
+    },
+    "label_sources": {
+      "sources": [
+        "none",
+        "ipam"
+      ],
+      "fields": [
+        "application",
+        "owner",
+        "environment"
+      ],
+      "notes": ""
+    },
+    "structure": {
+      "environments": [
+        "Production",
+        "Non-Production"
+      ],
+      "locations": [
+        {
+          "name": "boston",
+          "type": "datacenter"
+        },
+        {
+          "name": "washington",
+          "type": "aws"
+        },
+        {
+          "name": "seattle",
+          "type": "datacenter"
+        }
+      ],
+      "shared_services": [
+        "DNS",
+        "Active Directory",
+        "Backup",
+        "NTP",
+        "Monitoring",
+        "Patch Management"
+      ]
+    },
+    "applications": [
+      {
+        "name": "one two three four",
+        "environment": "Production",
+        "owner": "",
+        "location": "boston",
+        "subnets": "10.10.10.0/16"
+      },
+      {
+        "name": "test",
+        "environment": "Production",
+        "owner": "",
+        "location": "washington",
+        "subnets": "10.20.10.0/24"
+      },
+      {
+        "name": "payroll",
+        "environment": "Non-Production",
+        "owner": "",
+        "location": "seattle",
+        "subnets": ""
+      }
+    ],
+    "access": {
+      "separate_teams": true,
+      "teams": [
+        {
+          "name": "security",
+          "manages": ""
+        },
+        {
+          "name": "network",
+          "manages": ""
+        }
+      ]
+    },
+    "compliance": {
+      "has_zones": true,
+      "zones": [
+        {
+          "name": "zone 1",
+          "separate_team": false
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,716 @@
+<!-- interview.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Secure Workload Scope Planning Questionnaire</title>
+<style>
+  :root { --ink:#1b1f24; --muted:#5a6470; --line:#d5dae0; --bg:#f5f7f9; --card:#ffffff; --accent:#0b5cad; --bad:#b3261e; --ok:#1b6e3c; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color:var(--ink); background:var(--bg); }
+  header, main { max-width:860px; margin:0 auto; padding:16px; }
+  h1 { font-size:1.5rem; margin:8px 0; }
+  h2 { font-size:1.15rem; margin:0 0 4px; }
+  p { margin:6px 0; }
+  .note { background:#e8f1fb; border:1px solid #b9d3ee; border-radius:8px; padding:10px 12px; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin:14px 0; }
+  .q { margin:14px 0 0; }
+  .q > label.t, .q > .t { display:block; font-weight:600; }
+  .hint { color:var(--muted); font-size:.9rem; margin:2px 0 6px; }
+  input[type=text], input[type=email], input[type=number], select, textarea { width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:6px; font:inherit; background:#fff; color:var(--ink); }
+  textarea { min-height:90px; }
+  .opts label { display:block; padding:4px 0; font-weight:400; }
+  .opts input { margin-right:8px; }
+  button { font:inherit; padding:9px 14px; border-radius:6px; border:1px solid var(--accent); background:#fff; color:var(--accent); cursor:pointer; }
+  button.primary { background:var(--accent); color:#fff; }
+  button.small { padding:4px 10px; font-size:.9rem; }
+  button.danger { border-color:var(--bad); color:var(--bad); }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0; }
+  .chip { background:#e9edf2; border-radius:14px; padding:3px 6px 3px 12px; display:inline-flex; align-items:center; gap:6px; }
+  .chip button { border:0; background:transparent; color:var(--muted); padding:0 6px; font-size:1.1rem; line-height:1; }
+  .addline { display:flex; gap:8px; }
+  .addline input { flex:1; }
+  .suggest { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+  .row { border:1px solid var(--line); border-radius:8px; padding:10px; margin:8px 0; display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; background:#fbfcfd; }
+  .cell { flex:1 1 170px; min-width:0; }
+  .cell label { display:block; font-size:.85rem; color:var(--muted); }
+  .cell.check { flex:1 1 100%; }
+  .cell.check label { display:inline; font-size:1rem; color:var(--ink); }
+  #errors { background:#fdecea; border:1px solid #f1b5b0; color:var(--bad); border-radius:8px; padding:10px 14px; margin:14px 0; }
+  #errors ul { margin:6px 0 0 18px; padding:0; }
+  #status { color:var(--ok); font-weight:600; margin-top:10px; }
+  .actions { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  [hidden] { display:none !important; }
+  @media print { button, .addline, .suggest, #paste-box { display:none !important; } body { background:#fff; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Secure Workload Scope Planning Questionnaire</h1>
+  <p>Your answers are used to design the scope tree for your Cisco Secure Workload tenant. A scope is a named group of workloads, and the scope tree is how those groups are arranged.</p>
+  <p>Answer what you know and leave out what you do not. The scope tree can be built in rounds: send what you have now, then add to your saved answers later and send them again.</p>
+  <p class="note">This page works offline. Nothing you type is sent anywhere. Your answers stay on this computer until you save the answers file and send it to your Cisco contact.</p>
+  <div class="actions" style="margin-top:12px">
+    <button type="button" id="load-btn">Continue From A Saved File</button>
+    <input type="file" id="load-file" accept=".json,application/json" hidden>
+  </div>
+</header>
+
+<main>
+  <div id="errors" role="alert" hidden></div>
+
+  <section>
+    <h2>1. Your Organization</h2>
+    <div class="q"><label class="t" for="c-name">Organization name</label>
+      <input type="text" id="c-name" data-path="customer.name" autocomplete="organization"></div>
+    <div class="q"><label class="t" for="c-contact">Your name</label>
+      <input type="text" id="c-contact" data-path="customer.contact_name" autocomplete="name"></div>
+    <div class="q"><label class="t" for="c-email">Your email</label>
+      <input type="email" id="c-email" data-path="customer.contact_email" autocomplete="email"></div>
+  </section>
+
+  <section>
+    <h2>2. Your Secure Workload Tenant</h2>
+    <div class="q"><span class="t">How is Secure Workload deployed?</span>
+      <p class="hint">Size limits differ between the two, so the plan is checked against the right ones.</p>
+      <div class="opts">
+        <label><input type="radio" name="tenant.deployment" data-path="tenant.deployment" value="saas">SaaS (hosted by Cisco)</label>
+        <label><input type="radio" name="tenant.deployment" data-path="tenant.deployment" value="onprem">On-premises (hardware or virtual cluster you run)</label>
+      </div></div>
+    <div class="q" data-show-if="tenant.deployment=onprem"><span class="t">Which release is the cluster running?</span>
+      <p class="hint">Shown on the cluster under the About or Platform menu. The plan is built for release 3.10 and later.</p>
+      <div class="opts">
+        <label><input type="radio" name="tenant.release" data-path="tenant.release" value="4.0">4.0</label>
+        <label><input type="radio" name="tenant.release" data-path="tenant.release" value="3.10">3.10</label>
+        <label><input type="radio" name="tenant.release" data-path="tenant.release" value="older">Older than 3.10</label>
+        <label><input type="radio" name="tenant.release" data-path="tenant.release" value="unknown">Not sure</label>
+      </div></div>
+    <div class="q"><label class="t" for="t-lic">How many workload licenses do you own? (leave blank if you do not know)</label>
+      <p class="hint">The number of labeled addresses and subnets a SaaS tenant accepts depends on the license count.</p>
+      <input type="number" id="t-lic" min="1" step="1" inputmode="numeric" data-path="tenant.license_count"></div>
+    <div class="q"><span class="t">Does the tenant already have scopes below the top-level scope?</span>
+      <p class="hint">If it does, the plan adds to what exists and does not change it.</p>
+      <div class="opts">
+        <label><input type="radio" name="tenant.existing_tree" data-path="tenant.existing_tree" data-type="bool" value="false">No, this is a new tenant</label>
+        <label><input type="radio" name="tenant.existing_tree" data-path="tenant.existing_tree" data-type="bool" value="true">Yes, scopes already exist</label>
+      </div>
+      <p class="note" data-show-if="tenant.existing_tree=true">Your Cisco contact will send a small read-only program that saves your current scope list to a file. Send that file back together with this one.</p></div>
+    <div class="q" data-show-if="tenant.existing_tree=true"><label class="t" for="t-under">Which existing scope should the new scopes go under?</label>
+      <p class="hint">Give the full scope name as Secure Workload shows it, with colons between levels, for example Company:Internal:Lab. New scopes are added below it and nothing else is touched. Leave this blank if you are not sure, and your Cisco contact will choose it with you.</p>
+      <input type="text" id="t-under" data-path="tenant.build_under" placeholder="Company:Internal:Lab"></div>
+    <div class="q"><span class="t">Do any of your applications run on Kubernetes or OpenShift?</span>
+      <p class="hint">Container platforms are planned separately, by namespace.</p>
+      <div class="opts">
+        <label><input type="radio" name="tenant.kubernetes" data-path="tenant.kubernetes" data-type="bool" value="true">Yes</label>
+        <label><input type="radio" name="tenant.kubernetes" data-path="tenant.kubernetes" data-type="bool" value="false">No</label>
+      </div></div>
+  </section>
+
+  <section>
+    <h2>3. Where Your Server Records Live</h2>
+    <div class="q"><span class="t">Where do you keep records of what each server is for?</span>
+      <p class="hint">Scopes are built from labels on each workload. Labels are best pulled from a system you already maintain. Select all that apply.</p>
+      <div class="opts">
+        <label><input type="checkbox" data-set="label_sources.sources" value="cmdb">A configuration database (for example ServiceNow)</label>
+        <label><input type="checkbox" data-set="label_sources.sources" value="cloud_tags">Cloud tags (AWS, Azure, or Google Cloud)</label>
+        <label><input type="checkbox" data-set="label_sources.sources" value="vcenter">VMware vCenter tags</label>
+        <label><input type="checkbox" data-set="label_sources.sources" value="ipam">An IP address management system (for example Infoblox)</label>
+        <label><input type="checkbox" data-set="label_sources.sources" value="spreadsheet">Spreadsheets</label>
+        <label><input type="checkbox" data-set="label_sources.sources" value="none" data-exclusive>Nowhere reliable</label>
+      </div></div>
+    <div class="q"><span class="t">Which facts do those records hold for each server?</span>
+      <p class="hint">If your records do not tie each server to an application, give subnets or addresses for each application in section 5 where you have them.</p>
+      <div class="opts">
+        <label><input type="checkbox" data-set="label_sources.fields" value="application">Which application it belongs to</label>
+        <label><input type="checkbox" data-set="label_sources.fields" value="environment">Which environment it is in (for example Production)</label>
+        <label><input type="checkbox" data-set="label_sources.fields" value="owner">Who owns it</label>
+        <label><input type="checkbox" data-set="label_sources.fields" value="location">Where it runs (site or cloud)</label>
+      </div></div>
+    <div class="q"><label class="t" for="ls-notes">Anything else about your records (optional)</label>
+      <textarea id="ls-notes" data-path="label_sources.notes"></textarea></div>
+  </section>
+
+  <section>
+    <h2>4. How Your Environment Is Organized</h2>
+    <div class="q"><span class="t">Environments</span>
+      <p class="hint">Environments become the first level of the scope tree. Every server should belong to exactly one.</p>
+      <div data-list="structure.environments" data-noun="environment" data-suggest="Production|Non-Production|Development|Test|Staging|Disaster Recovery"></div></div>
+    <div class="q"><span class="t">Sites And Clouds</span>
+      <p class="hint">List each data center and each cloud you run servers in.</p>
+      <div data-table="structure.locations"></div></div>
+    <div class="q"><span class="t">Shared Services</span>
+      <p class="hint">Services that many applications depend on. Each one gets its own scope so one policy can cover access to it. Add the addresses if you know them. If you do not, leave them blank and add them in a later round.</p>
+      <div data-table="structure.shared_services"></div></div>
+  </section>
+
+  <section>
+    <h2>5. Your Applications</h2>
+    <p class="hint">Each application becomes a scope under its environment. If one application runs in two environments, add it once for each. List the applications you know today. Subnets, owner, and site can be left blank and added in a later round.</p>
+    <div data-table="applications"></div>
+    <div id="paste-box" class="q">
+      <label class="t" for="paste">Or paste rows from a spreadsheet</label>
+      <p class="hint">Column order: application, environment, owner, site or cloud, subnets. New environments and sites found here are added to section 4.</p>
+      <textarea id="paste" placeholder="Payroll&#9;Production&#9;Finance IT&#9;Dallas data center&#9;10.20.30.0/24"></textarea>
+      <p><button type="button" id="paste-add">Add Pasted Rows</button></p>
+    </div>
+  </section>
+
+  <section>
+    <h2>6. Who Manages Policy</h2>
+    <div class="q"><span class="t">Do different teams manage segmentation policy for different parts of the environment?</span>
+      <p class="hint">Access in Secure Workload is granted by scope, so separate teams can change the shape of the tree.</p>
+      <div class="opts">
+        <label><input type="radio" name="access.separate_teams" data-path="access.separate_teams" data-type="bool" value="false">No, one team manages all of it</label>
+        <label><input type="radio" name="access.separate_teams" data-path="access.separate_teams" data-type="bool" value="true">Yes, more than one team</label>
+      </div></div>
+    <div class="q" data-show-if="access.separate_teams=true"><span class="t">Teams</span>
+      <p class="hint">How responsibility is divided decides whether the scope tree needs an extra level for it.</p>
+      <div data-table="access.teams"></div></div>
+  </section>
+
+  <section>
+    <h2>7. Regulated Zones</h2>
+    <div class="q"><span class="t">Do you have regulated zones, such as systems in scope for PCI or HIPAA?</span>
+      <p class="hint">Regulated systems are labeled so policy can single them out.</p>
+      <div class="opts">
+        <label><input type="radio" name="compliance.has_zones" data-path="compliance.has_zones" data-type="bool" value="false">No</label>
+        <label><input type="radio" name="compliance.has_zones" data-path="compliance.has_zones" data-type="bool" value="true">Yes</label>
+      </div></div>
+    <div class="q" data-show-if="compliance.has_zones=true"><span class="t">Zones</span>
+      <p class="hint">After adding zones here, go back to section 5 and choose the zone for each application you know belongs to one.</p>
+      <div data-table="compliance.zones"></div></div>
+  </section>
+
+  <section>
+    <h2>8. Save Your Answers</h2>
+    <p>Save Progress keeps a file you can continue from later. Finish And Save checks your answers and produces the file to send to your Cisco contact.</p>
+    <p>For a later round, open this page, choose Continue From A Saved File, add what you have learned, answer Yes to the question about existing scopes, and use Finish And Save again.</p>
+    <div class="actions">
+      <button type="button" id="save-draft">Save Progress</button>
+      <button type="button" id="save-final" class="primary">Finish And Save</button>
+    </div>
+    <p id="status" role="status" hidden></p>
+  </section>
+  <p class="hint" id="tool-version">CSW Scope Builder version 1.2</p>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  var SCHEMA = 'csw-scope-interview';
+  var SCHEMA_VERSION = 4;
+  var TOOL_VERSION = '1.2';
+  var LOC_TYPES = [['datacenter', 'Data center'], ['aws', 'AWS'], ['azure', 'Azure'], ['gcp', 'Google Cloud'], ['other', 'Other']];
+  var MANAGES_BY = [['environment', 'Environment'], ['site', 'Site or cloud'], ['application', 'Application'], ['zone', 'Regulated zone'], ['unknown', 'Not sure yet']];
+  var SERVICE_SUGGEST = ['DNS', 'Active Directory', 'NTP', 'Backup', 'Monitoring', 'Patch Management', 'Jump Hosts'];
+
+  function defaults() {
+    return {
+      customer: { name: '', contact_name: '', contact_email: '' },
+      tenant: { deployment: '', release: '', license_count: '', existing_tree: null, build_under: '', kubernetes: null },
+      label_sources: { sources: [], fields: [], notes: '' },
+      structure: { environments: [], locations: [], shared_services: [] },
+      applications: [],
+      access: { separate_teams: null, teams: [] },
+      compliance: { has_zones: null, zones: [] }
+    };
+  }
+
+  var state = defaults();
+  var dirty = false;
+
+  var TABLES = {
+    'structure.locations': {
+      add: 'Add A Site Or Cloud',
+      cols: [
+        { k: 'name', l: 'Name', t: 'text', ph: 'Example: Dallas data center' },
+        { k: 'type', l: 'Type', t: 'select', opts: function () { return LOC_TYPES; } }
+      ]
+    },
+    'structure.shared_services': {
+      add: 'Add A Shared Service',
+      suggest: SERVICE_SUGGEST,
+      cols: [
+        { k: 'name', l: 'Service', t: 'text', ph: 'Example: DNS' },
+        { k: 'subnets', l: 'Subnets or addresses (optional)', t: 'text', ph: '10.0.0.53, 10.0.1.0/28' }
+      ]
+    },
+    'applications': {
+      add: 'Add An Application',
+      cols: [
+        { k: 'name', l: 'Application', t: 'text', ph: 'Example: Payroll' },
+        { k: 'environment', l: 'Environment', t: 'select', opts: function () { return state.structure.environments.map(function (e) { return [e, e]; }); } },
+        { k: 'owner', l: 'Owner', t: 'text', ph: 'Team or person' },
+        { k: 'location', l: 'Site or cloud', t: 'select', opts: function () {
+            return state.structure.locations.filter(function (x) { return trim(x.name); }).map(function (x) { return [trim(x.name), trim(x.name)]; });
+          } },
+        { k: 'subnets', l: 'Subnets or addresses (optional)', t: 'text', ph: '10.20.30.0/24, 10.20.31.5' },
+        { k: 'zone', l: 'Regulated zone', t: 'select', none: 'None',
+          show: function () { return state.compliance.has_zones === true && zoneNames().length > 0; },
+          opts: function () { return zoneNames().map(function (z) { return [z, z]; }); } }
+      ]
+    },
+    'access.teams': {
+      add: 'Add A Team',
+      cols: [
+        { k: 'name', l: 'Team name', t: 'text' },
+        { k: 'manages_by', l: 'Their responsibility is divided by', t: 'select', opts: function () { return MANAGES_BY; } },
+        { k: 'manages', l: 'Which ones (optional)', t: 'text', ph: 'Example: Production only' }
+      ]
+    },
+    'compliance.zones': {
+      add: 'Add A Zone',
+      cols: [
+        { k: 'name', l: 'Zone name', t: 'text', ph: 'Example: PCI' },
+        { k: 'separate_team', l: 'A separate team owns policy for this zone', t: 'check' }
+      ]
+    }
+  };
+
+  /* ---------- helpers ---------- */
+  function trim(s) { return String(s == null ? '' : s).trim(); }
+  function zoneNames() {
+    return state.compliance.zones.map(function (z) { return trim(z.name); }).filter(Boolean);
+  }
+  function getPath(p) { return p.split('.').reduce(function (o, k) { return o == null ? undefined : o[k]; }, state); }
+  function setPath(p, v) {
+    var ks = p.split('.'), o = state;
+    for (var i = 0; i < ks.length - 1; i++) { o = o[ks[i]]; }
+    o[ks[ks.length - 1]] = v;
+    dirty = true;
+  }
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) { n.className = cls; }
+    if (text != null) { n.textContent = text; }
+    return n;
+  }
+  function hasCI(arr, v) {
+    var lv = v.toLowerCase();
+    return arr.some(function (x) { return String(x).toLowerCase() === lv; });
+  }
+  var uid = 0;
+  function nextId() { uid += 1; return 'f' + uid; }
+
+  /* ---------- scalar fields ---------- */
+  function bindScalars() {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-path]'), function (inp) {
+      var p = inp.getAttribute('data-path');
+      if (inp.type === 'radio') {
+        inp.addEventListener('change', function () {
+          if (!inp.checked) { return; }
+          setPath(p, inp.getAttribute('data-type') === 'bool' ? inp.value === 'true' : inp.value);
+          refreshVisibility();
+          renderTables();
+        });
+      } else {
+        inp.addEventListener('input', function () {
+          if (inp.type === 'number') { setPath(p, inp.value === '' ? '' : Number(inp.value)); }
+          else { setPath(p, inp.value); }
+        });
+      }
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-set]'), function (inp) {
+      inp.addEventListener('change', function () {
+        var p = inp.getAttribute('data-set');
+        var arr = getPath(p).slice();
+        var i = arr.indexOf(inp.value);
+        if (inp.checked && i < 0) { arr.push(inp.value); }
+        if (!inp.checked && i >= 0) { arr.splice(i, 1); }
+        if (inp.getAttribute('data-exclusive') !== null && inp.checked) { arr = [inp.value]; }
+        else if (inp.checked) {
+          Array.prototype.forEach.call(document.querySelectorAll('[data-set="' + p + '"][data-exclusive]'), function (x) {
+            var j = arr.indexOf(x.value); if (j >= 0) { arr.splice(j, 1); }
+          });
+        }
+        setPath(p, arr);
+        fillScalars();
+      });
+    });
+  }
+  function fillScalars() {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-path]'), function (inp) {
+      var v = getPath(inp.getAttribute('data-path'));
+      if (inp.type === 'radio') { inp.checked = (v !== null && v !== '' && String(v) === inp.value); }
+      else { inp.value = (v == null ? '' : v); }
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-set]'), function (inp) {
+      inp.checked = getPath(inp.getAttribute('data-set')).indexOf(inp.value) >= 0;
+    });
+  }
+  function refreshVisibility() {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-show-if]'), function (node) {
+      var parts = node.getAttribute('data-show-if').split('=');
+      node.hidden = String(getPath(parts[0])) !== parts[1];
+    });
+  }
+
+  /* ---------- simple lists ---------- */
+  function renderList(box) {
+    var p = box.getAttribute('data-list');
+    var noun = box.getAttribute('data-noun') || 'item';
+    var suggest = (box.getAttribute('data-suggest') || '').split('|').filter(Boolean);
+    var items = getPath(p);
+    box.textContent = '';
+
+    var chips = el('div', 'chips');
+    items.forEach(function (it, i) {
+      var c = el('span', 'chip', it);
+      var x = el('button', null, '×');
+      x.type = 'button';
+      x.setAttribute('aria-label', 'Remove ' + it);
+      x.addEventListener('click', function () {
+        var arr = getPath(p).slice(); arr.splice(i, 1); setPath(p, arr);
+        renderList(box); renderTables();
+      });
+      c.appendChild(x); chips.appendChild(c);
+    });
+    box.appendChild(chips);
+
+    function add(v) {
+      v = trim(v);
+      if (!v || hasCI(getPath(p), v)) { return; }
+      setPath(p, getPath(p).concat([v]));
+      renderList(box); renderTables();
+    }
+
+    var line = el('div', 'addline');
+    var inp = el('input'); inp.type = 'text';
+    inp.setAttribute('aria-label', 'New ' + noun);
+    inp.placeholder = 'Type a new ' + noun;
+    var btn = el('button', null, 'Add'); btn.type = 'button';
+    btn.addEventListener('click', function () { add(inp.value); });
+    inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); add(inp.value); } });
+    line.appendChild(inp); line.appendChild(btn); box.appendChild(line);
+
+    var left = suggest.filter(function (s) { return !hasCI(items, s); });
+    if (left.length) {
+      var sg = el('div', 'suggest');
+      left.forEach(function (s) {
+        var b = el('button', 'small', 'Add ' + s); b.type = 'button';
+        b.addEventListener('click', function () { add(s); });
+        sg.appendChild(b);
+      });
+      box.appendChild(sg);
+    }
+  }
+  function renderLists() { Array.prototype.forEach.call(document.querySelectorAll('[data-list]'), renderList); }
+
+  /* ---------- row tables ---------- */
+  function blankRow(cfg) {
+    var r = {};
+    cfg.cols.forEach(function (c) { r[c.k] = (c.t === 'check' ? false : ''); });
+    return r;
+  }
+  function renderTable(box) {
+    var p = box.getAttribute('data-table');
+    var cfg = TABLES[p];
+    var rows = getPath(p);
+    box.textContent = '';
+
+    rows.forEach(function (row, i) {
+      var r = el('div', 'row');
+      cfg.cols.forEach(function (c) {
+        if (c.show && !c.show()) { return; }
+        var id = nextId();
+        var cell = el('div', 'cell' + (c.t === 'check' ? ' check' : ''));
+        var lab = el('label', null, c.l); lab.setAttribute('for', id);
+        var ctl;
+        if (c.t === 'select') {
+          ctl = el('select');
+          var first = el('option', null, c.none || 'Choose'); first.value = ''; ctl.appendChild(first);
+          var opts = c.opts();
+          var seen = false;
+          opts.forEach(function (o) {
+            var op = el('option', null, o[1]); op.value = o[0];
+            if (o[0] === row[c.k]) { seen = true; }
+            ctl.appendChild(op);
+          });
+          if (row[c.k] && !seen) {
+            var stale = el('option', null, row[c.k] + ' (no longer listed)'); stale.value = row[c.k]; ctl.appendChild(stale);
+          }
+          ctl.value = row[c.k] || '';
+          ctl.addEventListener('change', function () { row[c.k] = ctl.value; dirty = true; });
+        } else if (c.t === 'check') {
+          ctl = el('input'); ctl.type = 'checkbox'; ctl.checked = !!row[c.k];
+          ctl.addEventListener('change', function () { row[c.k] = ctl.checked; dirty = true; });
+        } else {
+          ctl = el('input'); ctl.type = 'text'; ctl.value = row[c.k] || '';
+          if (c.ph) { ctl.placeholder = c.ph; }
+          ctl.addEventListener('input', function () { row[c.k] = ctl.value; dirty = true; });
+          if (p === 'structure.locations' || p === 'compliance.zones') {
+            ctl.addEventListener('change', function () { renderTables(p); });
+          }
+        }
+        ctl.id = id;
+        if (c.t === 'check') { cell.appendChild(ctl); cell.appendChild(document.createTextNode(' ')); cell.appendChild(lab); }
+        else { cell.appendChild(lab); cell.appendChild(ctl); }
+        r.appendChild(cell);
+      });
+      var del = el('button', 'small danger', 'Remove'); del.type = 'button';
+      del.addEventListener('click', function () {
+        rows.splice(i, 1); dirty = true; renderTables();
+      });
+      r.appendChild(del);
+      box.appendChild(r);
+    });
+
+    var add = el('button', null, cfg.add); add.type = 'button';
+    add.addEventListener('click', function () {
+      rows.push(blankRow(cfg)); dirty = true; renderTable(box);
+      var inputs = box.querySelectorAll('.row:last-of-type input[type=text]');
+      if (inputs.length) { inputs[0].focus(); }
+    });
+    box.appendChild(add);
+
+    if (cfg.suggest) {
+      var open = cfg.suggest.filter(function (sv) {
+        return !rows.some(function (rw) { return trim(rw.name).toLowerCase() === sv.toLowerCase(); });
+      });
+      if (open.length) {
+        var sg = el('div', 'suggest');
+        open.forEach(function (sv) {
+          var b = el('button', 'small', 'Add ' + sv); b.type = 'button';
+          b.addEventListener('click', function () {
+            var nr = blankRow(cfg); nr.name = sv; rows.push(nr); dirty = true; renderTable(box);
+          });
+          sg.appendChild(b);
+        });
+        box.appendChild(sg);
+      }
+    }
+  }
+  function renderTables(except) {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-table]'), function (box) {
+      if (box.getAttribute('data-table') !== except) { renderTable(box); }
+    });
+  }
+
+  /* ---------- paste import ---------- */
+  function importPasted(text) {
+    var added = 0;
+    String(text).split(/\r?\n/).forEach(function (line, idx) {
+      if (!trim(line)) { return; }
+      var parts = line.indexOf('\t') >= 0 ? line.split('\t') : line.split(',');
+      parts = parts.map(trim);
+      var name = parts[0] || '';
+      if (!name) { return; }
+      if (idx === 0 && /^(application|app|name)s?$/i.test(name)) { return; }
+      var env = parts[1] || '', owner = parts[2] || '', loc = parts[3] || '';
+      var subnets = parts.slice(4).filter(Boolean).join(', ');
+      if (env) {
+        var match = state.structure.environments.filter(function (e) { return e.toLowerCase() === env.toLowerCase(); })[0];
+        if (match) { env = match; } else { state.structure.environments.push(env); }
+      }
+      if (loc) {
+        var lm = state.structure.locations.filter(function (x) { return trim(x.name).toLowerCase() === loc.toLowerCase(); })[0];
+        if (lm) { loc = trim(lm.name); } else { state.structure.locations.push({ name: loc, type: '' }); }
+      }
+      state.applications.push({ name: name, environment: env, owner: owner, location: loc, subnets: subnets, zone: '' });
+      added += 1;
+    });
+    if (added) { dirty = true; }
+    return added;
+  }
+
+  /* ---------- validation ---------- */
+  function validSubnetToken(t) {
+    if (t.indexOf(':') >= 0) { return /^[0-9a-fA-F:.]+(\/\d{1,3})?$/.test(t); }
+    var m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})(?:\/(\d{1,2}))?$/.exec(t);
+    if (!m) { return false; }
+    for (var i = 1; i <= 4; i++) { if (Number(m[i]) > 255) { return false; } }
+    return m[5] === undefined || Number(m[5]) <= 32;
+  }
+  function badSubnets(s) {
+    return trim(s).split(/[\s,;]+/).filter(Boolean).filter(function (t) { return !validSubnetToken(t); });
+  }
+  function misalignedSubnets(s) {
+    var out = [];
+    trim(s).split(/[\s,;]+/).filter(Boolean).forEach(function (t) {
+      var m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/(\d{1,2})$/.exec(t);
+      if (!m || !validSubnetToken(t)) { return; }
+      var bits = Number(m[5]);
+      var ip = ((Number(m[1]) * 16777216) + (Number(m[2]) * 65536) + (Number(m[3]) * 256) + Number(m[4])) >>> 0;
+      var mask = bits === 0 ? 0 : (0xFFFFFFFF << (32 - bits)) >>> 0;
+      var net = (ip & mask) >>> 0;
+      if (net !== ip) {
+        var fixed = [(net >>> 24) & 255, (net >>> 16) & 255, (net >>> 8) & 255, net & 255].join('.') + '/' + bits;
+        out.push(t + ' should be written ' + fixed);
+      }
+    });
+    return out;
+  }
+  function validate() {
+    var e = [];
+    var s = state;
+    if (!trim(s.customer.name)) { e.push('Section 1: enter your organization name.'); }
+    if (!s.tenant.deployment) { e.push('Section 2: choose how Secure Workload is deployed.'); }
+    if (s.tenant.deployment === 'onprem' && !s.tenant.release) { e.push('Section 2: choose the release the cluster is running.'); }
+    var lic = s.tenant.license_count;
+    if (lic !== '' && lic !== null && (!(Number(lic) >= 1) || Math.floor(Number(lic)) !== Number(lic))) { e.push('Section 2: the number of workload licenses must be a whole number. Leave it blank if you do not know it.'); }
+    if (s.tenant.existing_tree === null) { e.push('Section 2: say whether scopes already exist.'); }
+    if (s.tenant.kubernetes === null) { e.push('Section 2: answer the Kubernetes question.'); }
+    if (!s.label_sources.sources.length) { e.push('Section 3: select where your server records live.'); }
+    if (s.label_sources.sources.indexOf('none') >= 0 && s.label_sources.sources.length > 1) { e.push('Section 3: "Nowhere reliable" cannot be combined with another choice.'); }
+    if (!s.structure.environments.length) { e.push('Section 4: add at least one environment.'); }
+    s.structure.locations.forEach(function (l, i) {
+      if (!trim(l.name)) { e.push('Section 4: site or cloud ' + (i + 1) + ' has no name.'); }
+    });
+    var svcSeen = {};
+    s.structure.shared_services.forEach(function (sv, i) {
+      var stag = 'Section 4, shared service ' + (i + 1) + (trim(sv.name) ? ' (' + trim(sv.name) + ')' : '') + ': ';
+      if (!trim(sv.name)) { e.push(stag + 'enter a name or remove the row.'); return; }
+      if (svcSeen[trim(sv.name).toLowerCase()]) { e.push(stag + 'this service is listed more than once.'); }
+      svcSeen[trim(sv.name).toLowerCase()] = true;
+      var sbad = badSubnets(sv.subnets);
+      if (sbad.length) { e.push(stag + 'these are not valid subnets or addresses: ' + sbad.join(', ') + '.'); }
+      var smis = misalignedSubnets(sv.subnets);
+      if (smis.length) { e.push(stag + 'the subnet does not start on its network address: ' + smis.join('; ') + '. For a single server, enter the address with no slash.'); }
+    });
+    var zonesOn = s.compliance.has_zones === true;
+    var seen = {};
+    s.applications.forEach(function (a, i) {
+      var tag = 'Section 5, application ' + (i + 1) + (trim(a.name) ? ' (' + trim(a.name) + ')' : '') + ': ';
+      if (!trim(a.name)) { e.push(tag + 'enter a name.'); }
+      if (!a.environment) { e.push(tag + 'choose an environment.'); }
+      else if (s.structure.environments.indexOf(a.environment) < 0) { e.push(tag + 'the environment "' + a.environment + '" is no longer listed in section 4.'); }
+      if (a.location && !s.structure.locations.some(function (l) { return trim(l.name) === a.location; })) { e.push(tag + 'the site or cloud "' + a.location + '" is no longer listed in section 4.'); }
+      var bad = badSubnets(a.subnets);
+      if (bad.length) { e.push(tag + 'these are not valid subnets or addresses: ' + bad.join(', ') + '.'); }
+      var mis = misalignedSubnets(a.subnets);
+      if (mis.length) { e.push(tag + 'the subnet does not start on its network address: ' + mis.join('; ') + '. For a single server, enter the address with no slash.'); }
+      if (zonesOn && a.zone && zoneNames().indexOf(a.zone) < 0) { e.push(tag + 'the regulated zone "' + a.zone + '" is no longer listed in section 7.'); }
+      var key = trim(a.name).toLowerCase() + '|' + String(a.environment).toLowerCase();
+      if (trim(a.name) && seen[key]) { e.push(tag + 'this application is listed more than once in the same environment.'); }
+      seen[key] = true;
+    });
+    if (s.access.separate_teams === null) { e.push('Section 6: say whether more than one team manages policy.'); }
+    if (s.access.separate_teams === true && !s.access.teams.some(function (t) { return trim(t.name); })) { e.push('Section 6: add at least one team.'); }
+    if (s.access.separate_teams === true) {
+      s.access.teams.forEach(function (t, i) {
+        if (!trim(t.name)) { e.push('Section 6: team ' + (i + 1) + ' has no name.'); }
+        else if (!t.manages_by) { e.push('Section 6, team ' + trim(t.name) + ': choose how their responsibility is divided.'); }
+      });
+    }
+    if (s.compliance.has_zones === null) { e.push('Section 7: say whether you have regulated zones.'); }
+    if (s.compliance.has_zones === true && !s.compliance.zones.some(function (z) { return trim(z.name); })) { e.push('Section 7: add at least one zone.'); }
+    return e;
+  }
+  function showErrors(list) {
+    var box = document.getElementById('errors');
+    box.textContent = '';
+    if (!list.length) { box.hidden = true; return; }
+    box.appendChild(el('strong', null, 'Please fix ' + list.length + (list.length === 1 ? ' item' : ' items') + ' before finishing.'));
+    var ul = el('ul');
+    list.forEach(function (m) { ul.appendChild(el('li', null, m)); });
+    box.appendChild(ul);
+    box.hidden = false;
+    if (box.scrollIntoView) { box.scrollIntoView(); }
+  }
+
+  /* ---------- save and load ---------- */
+  function today() {
+    var d = new Date();
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+  function buildOutput(complete) {
+    return { schema: SCHEMA, schema_version: SCHEMA_VERSION, tool_version: TOOL_VERSION, complete: !!complete, saved_at: new Date().toISOString(), answers: JSON.parse(JSON.stringify(state)) };
+  }
+  function fileName(complete) {
+    var who = trim(state.customer.name).replace(/[\\/:*?"<>|]/g, '') || 'Customer';
+    return today() + ' ' + who + ' - CSW Scope Answers' + (complete ? '' : ' (In Progress)') + '.json';
+  }
+  function download(complete) {
+    var name = fileName(complete);
+    var blob = new Blob([JSON.stringify(buildOutput(complete), null, 2)], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    dirty = false;
+    var st = document.getElementById('status');
+    st.textContent = complete
+      ? 'Saved "' + name + '". Email this file to your Cisco contact.'
+      : 'Saved "' + name + '". Open this page again and choose Continue From A Saved File to pick up where you left off.';
+    st.hidden = false;
+  }
+  function merge(base, src) {
+    Object.keys(base).forEach(function (k) {
+      if (src == null || !(k in src)) { return; }
+      if (Array.isArray(base[k])) { if (Array.isArray(src[k])) { base[k] = src[k]; } }
+      else if (base[k] !== null && typeof base[k] === 'object') { merge(base[k], src[k]); }
+      else { base[k] = src[k]; }
+    });
+    return base;
+  }
+  function loadText(text) {
+    var data;
+    try { data = JSON.parse(text); } catch (err) { return 'That file could not be read. Choose an answers file saved from this page.'; }
+    if (!data || data.schema !== SCHEMA || !data.answers) { return 'That file is not an answers file saved from this page.'; }
+    if (Number(data.schema_version) > SCHEMA_VERSION) { return 'That answers file is too new for this page: it uses answers format ' + data.schema_version + ' and this page understands up to ' + SCHEMA_VERSION + '. Ask your Cisco contact for the current questionnaire and open the file there.'; }
+    state = merge(defaults(), data.answers);
+    state.structure.shared_services = state.structure.shared_services.map(function (sv) {
+      return (sv && typeof sv === 'object') ? { name: trim(sv.name), subnets: trim(sv.subnets) } : { name: trim(sv), subnets: '' };
+    });
+    dirty = false;
+    renderAll();
+    return '';
+  }
+
+  function renderAll() { fillScalars(); refreshVisibility(); renderLists(); renderTables(); }
+
+  /* ---------- wire up ---------- */
+  function init() {
+    bindScalars();
+    renderAll();
+
+    document.getElementById('paste-add').addEventListener('click', function () {
+      var ta = document.getElementById('paste');
+      var n = importPasted(ta.value);
+      if (n) { ta.value = ''; renderLists(); renderTables(); }
+    });
+    document.getElementById('save-draft').addEventListener('click', function () { showErrors([]); download(false); });
+    document.getElementById('save-final').addEventListener('click', function () {
+      var errs = validate();
+      showErrors(errs);
+      if (!errs.length) { download(true); }
+    });
+    var lf = document.getElementById('load-file');
+    document.getElementById('load-btn').addEventListener('click', function () { lf.click(); });
+    lf.addEventListener('change', function () {
+      if (!lf.files || !lf.files[0]) { return; }
+      var fr = new FileReader();
+      fr.onload = function () {
+        var msg = loadText(String(fr.result));
+        showErrors(msg ? [msg] : []);
+        lf.value = '';
+      };
+      fr.readAsText(lf.files[0]);
+    });
+    window.addEventListener('beforeunload', function (e) {
+      if (dirty) { e.preventDefault(); e.returnValue = ''; }
+    });
+  }
+
+  window.CSWInterview = {
+    getState: function () { return state; },
+    validate: validate,
+    importPasted: importPasted,
+    loadText: loadText,
+    buildOutput: buildOutput,
+    TOOL_VERSION: TOOL_VERSION,
+    fileName: fileName,
+    renderAll: renderAll
+  };
+
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); } else { init(); }
+})();
+</script>
+</body>
+</html>

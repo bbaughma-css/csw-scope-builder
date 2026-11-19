@@ -1,0 +1,92 @@
+<!-- customer-guide.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Secure Workload Scope Builder: Customer Guide</title>
+<style>
+  body { margin:0 auto; max-width:820px; padding:20px; font:15px/1.45 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color:#1b1f24; }
+  h1 { font-size:1.4rem; margin:0 0 4px; }
+  h2 { font-size:1.08rem; margin:18px 0 4px; border-bottom:1px solid #d5dae0; padding-bottom:3px; }
+  p, li { margin:4px 0; }
+  .meta { color:#5a6470; font-size:.88rem; }
+  code, pre { font-family:Menlo, Consolas, monospace; font-size:.85rem; background:#f1f3f5; border-radius:4px; }
+  code { padding:1px 4px; }
+  pre { padding:8px 10px; overflow-x:auto; white-space:pre-wrap; word-break:break-word; }
+  .note { background:#e8f1fb; border:1px solid #b9d3ee; border-radius:6px; padding:8px 10px; }
+  @media print { body { padding:0; font-size:12px; } h2 { break-after:avoid; } }
+</style>
+</head>
+<body>
+<h1>Secure Workload Scope Builder: Customer Guide</h1>
+<p class="meta">Version 1.2, 19 Nov 2026. Supersedes: 1.1.</p>
+<p>Your Cisco contact sent you two files with this guide. Together they are used to design and build the scope tree in your Cisco Secure Workload tenant. You run both yourself. Cisco never needs a login or an API key for your tenant.</p>
+
+<h2>Part 1. Fill Out The Questionnaire</h2>
+<ol>
+  <li>Save <code>interview.html</code> to your computer and double-click it. It opens in your web browser.</li>
+  <li>Answer what you know and leave out what you do not. The tree can be built in rounds.</li>
+  <li>Select "Finish And Save" at the bottom. Email the answers file it saves to your Cisco contact.</li>
+</ol>
+<p class="note">The questionnaire works offline. Nothing you type is sent anywhere until you email the saved file.</p>
+
+<h2>Part 2. Save Your Current Scope List</h2>
+<p>Do this part only if your tenant already has scopes below the top-level scope.</p>
+<ol>
+  <li>Check that Python 3.8 or later is installed. In Terminal (macOS or Linux) or Command Prompt (Windows), run <code>python3 --version</code>. On Windows, use <code>py</code> in place of <code>python3</code> in every command. When the program prints a command for you to run next, it already uses the right form for your computer.</li>
+  <li>Have a Secure Workload API key and API secret ready. The key is 32 characters and the secret is 40. The key needs the capability <code>user_role_scope_management</code>. The long Security Cloud Control access token is a different credential and does not work.</li>
+  <li>In the folder that holds <code>csw_scope_helper.py</code>, run:
+    <pre>python3 csw_scope_helper.py export --under "full name of the scope to build under"</pre>
+    Leave off <code>--under</code> and the name to save every scope in the tenant.</li>
+  <li>Enter your tenant address, the key, and the secret when asked. The secret is not shown as you type or paste.</li>
+  <li>Email the file it saves, named like "2026-11-19 Name - CSW Existing Scopes.json", to your Cisco contact.</li>
+</ol>
+<p class="note">This command only reads. It changes nothing in your tenant, and it never saves your key or secret.</p>
+<p>The command also reads what depends on each scope, so the plan can warn you before a scope that is in use is removed. It saves only the ID and name of each item and reads no policy content. Each list needs its own capability on the API key. If the key lacks one, the command still works and marks that list "not read".</p>
+<ul>
+  <li>Workspaces: <code>app_policy_management</code></li>
+  <li>Inventory filters: <code>app_policy_management</code> or <code>sensor_management</code></li>
+  <li>Roles: <code>user_role_scope_management</code>, as a site admin or an owner of the top-level scope</li>
+</ul>
+
+<h2>Part 3. Build The Scopes</h2>
+<p>Your Cisco contact sends back three things: the plan document, a label file, and a plan file. Read the plan document first. Its to-do list repeats these steps with your scope name filled in.</p>
+<ol>
+  <li><strong>Add to the label file if needed.</strong> You can add rows for servers the questionnaire did not cover. Keep the first column named <code>IP</code> and do not rename the other columns.</li>
+  <li><strong>Check the label file.</strong> This changes nothing and lists any existing value an upload would replace:
+    <pre>python3 csw_scope_helper.py check-labels --labels "your label file.csv" --under "full name of the scope to build under"</pre>
+    If it says STOP, do not upload. Send the output to your Cisco contact.</li>
+  <li><strong>Upload the label file.</strong> In Secure Workload, go to Organize &gt; Label Management &gt; User Defined Label Upload. Choose the Merge operation.</li>
+  <li><strong>Preview the build.</strong> This changes nothing and lists every scope it would create:
+    <pre>python3 csw_scope_helper.py apply --plan "your plan file.json" --under "full name of the scope to build under"</pre></li>
+  <li><strong>Build.</strong> Run the same command with <code>--write</code> added at the end, and type yes when asked. Each scope is created, read back, and confirmed. If the build is interrupted, run the same command again. It says it is continuing the earlier build and picks up where it stopped.</li>
+  <li><strong>Make approved changes to existing scopes, if the plan has any.</strong> The plan document lists them under "Changes To Existing Scopes". Creating scopes never touches them. To rename scopes or change queries, add <code>--allow-changes</code> after <code>--write</code>. To remove scopes, add <code>--allow-removals</code>. The program lists each change, before and after, and waits for you to type yes. Items your Cisco contact did not approve are skipped and listed. To look at the pending query changes in Secure Workload before they take effect, also add <code>--no-commit</code>. The program then makes the changes and leaves the commit to you, under Organize &gt; Scopes and Inventory.</li>
+  <li><strong>Check the result.</strong> In Secure Workload, look at the new scopes under your parent scope and compare the workload count in each with what you expect.</li>
+</ol>
+
+<h2>If You Need To Reverse It</h2>
+<p>The build saves a record file and prints the exact command to reverse what it did:</p>
+<pre>python3 csw_scope_helper.py undo --record "the record file.json"</pre>
+<p>That previews the reversal. Add <code>--write</code> to carry it out. It removes only scopes listed in that record file, and it refuses if anything it did not create has been placed under them. If the build renamed scopes, changed queries, or removed scopes, undo puts the names and queries back and recreates the removed scopes. A recreated scope gets a new ID, so anything that was attached to the old one must be attached again by hand.</p>
+<p>If the connection drops during a build or an undo, the program checks your tenant, records what was and was not done, and stops. Run the same command again and it continues from there. If undo says a scope is "IN USE, not removed", something was attached to that scope after it was created. Remove what depends on it in Secure Workload and run the same undo command again.</p>
+<p>If the record file is lost, this lists every scope under your parent scope that the program created:</p>
+<pre>python3 csw_scope_helper.py undo --find-created --under "full name of the scope you built under"</pre>
+<p>That only lists them. Add <code>--write</code> to remove them. It asks you to type yes and repeats the number of scopes first.</p>
+
+<h2>What The Program Will And Will Not Do</h2>
+<ul>
+  <li>It changes your tenant only when you add <code>--write</code> and type yes.</li>
+  <li>It adds new scopes under the parent scope you name. It renames, changes, or removes an existing scope only when the plan approves that item, you add <code>--allow-changes</code> or <code>--allow-removals</code>, and you type yes after seeing it listed. <code>--yes</code> does not skip that prompt.</li>
+  <li>It never changes a top-level scope or anything outside the parent scope you name. It cannot move a scope to a different parent.</li>
+  <li>If Secure Workload refuses to remove a scope because something depends on it, the program prints what Secure Workload says, leaves the scope in place, and does not try again.</li>
+  <li>It does not upload labels and does not create or change policy.</li>
+  <li>It commits scope changes only when every uncommitted scope change in the tenant is part of its own work. Otherwise it tells you to commit from Organize &gt; Scopes and Inventory. A commit can take several minutes. The program waits up to 5 minutes and then keeps checking. Use <code>--commit-timeout</code> with a number of seconds to change the wait.</li>
+  <li>If your tenant is an on-premises cluster with a private certificate, add <code>--ca-file</code> with the certificate file. There is no option to skip certificate checking.</li>
+  <li>It is a single readable Python file that uses only the Python standard library. Your security team can review it before you run it.</li>
+</ul>
+
+<h2>For A Later Round</h2>
+<p>Open <code>interview.html</code>, select "Continue From A Saved File", add what you have learned, answer Yes to the question about existing scopes, and use "Finish And Save" again. Then repeat Part 2 and send both files.</p>
+</body>
+</html>
