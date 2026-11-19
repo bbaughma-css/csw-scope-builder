@@ -2,7 +2,7 @@
 
 Version 1.2 | 19 Nov 2026 | Supersedes: 1.1
 
-CSW Scope Builder turns a customer's answers about their environment into a Cisco Secure Workload (CSW) scope tree that follows Cisco's scope design principles. It produces a plan document, a label file, and a plan file. It can create the scopes in the customer's tenant under a parent scope the customer chooses. From version 1.2 it can also rename an existing scope, change its query, or remove it, but only for changes the consultant approves in the plan and the customer allows when building.
+CSW Scope Builder turns a customer's answers about their environment into a Cisco Secure Workload (CSW) scope tree that follows Cisco's scope design principles. It produces a plan document, a label file, and a plan file. It can create the scopes in the customer's tenant under a parent scope the customer chooses. From version 1.2 it can also rename an existing scope, change its query, or remove it, but only for changes the CSS approves in the plan and the customer allows when building.
 
 A scope is a named group of workloads defined by a query. The scope tree is how those groups are arranged, and it is the anchor for policy and for access control.
 
@@ -10,9 +10,9 @@ A scope is a named group of workloads defined by a query. The scope tree is how 
 
 | File | Who uses it | What it is |
 |---|---|---|
-| `index.html` | Consultant | Start page with the workflow and links to everything else |
+| `index.html` | CSS | Start page with the workflow and links to everything else |
 | `interview.html` | Customer | Questionnaire. Works offline and sends nothing anywhere. Saves an answers file |
-| `planner.html` | Consultant | Reads the answers file and builds the plan. Runs entirely in the browser |
+| `planner.html` | CSS | Reads the answers file and builds the plan. Runs entirely in the browser |
 | `csw_scope_helper.py` | Customer | Python program that reads the tenant's scopes, checks labels, creates scopes, makes approved changes to existing scopes, and undoes a run |
 | `customer-guide.html` | Customer | One page of instructions to send with the questionnaire and the helper |
 | `tests/` | Maintainer | Automated tests for all three pieces and the shared rule tables (`rules.json`) |
@@ -32,15 +32,15 @@ A page or the helper refuses a file in a newer format than it understands and sa
 
 ## How It Works
 
-1. The consultant emails the customer `interview.html`, `csw_scope_helper.py`, and `customer-guide.html`.
+1. The CSS emails the customer `interview.html`, `csw_scope_helper.py`, and `customer-guide.html`.
 2. The customer fills out the questionnaire and sends back the answers file.
 3. If the tenant already has scopes, the customer runs the helper's `export` command and sends back the scope list file.
-4. The consultant opens `planner.html`, loads the files, and gets the plan. The consultant sends the customer the plan document (PDF), the label file, and the plan file.
+4. The CSS opens `planner.html`, loads the files, and gets the plan. The CSS sends the customer the plan document (PDF), the label file, and the plan file.
 5. The customer checks and uploads the label file, then creates the scopes with the helper's `apply` command or by hand.
 
-The consultant never needs a login or an API key for the customer's tenant. The customer reads from the tenant in step 3 and writes to it in step 5.
+The CSS never needs a login or an API key for the customer's tenant. The customer reads from the tenant in step 3 and writes to it in step 5.
 
-## What The Consultant Does
+## What The CSS Does
 
 1. Send the three customer files.
 2. When the answers file arrives, open `planner.html` in a browser.
@@ -60,7 +60,7 @@ The plan has nine sections: summary, findings, scope tree, changes to existing s
 | Finding type | Meaning |
 |---|---|
 | Blocker | Stops the build. The label file cannot be downloaded and the helper refuses the plan file |
-| Review | Needs a decision from the consultant or the customer |
+| Review | Needs a decision from the CSS or the customer |
 | Later Round | Information is missing. It does not stop this round |
 
 ## Building Under Any Scope
@@ -87,14 +87,14 @@ Version 1.2 gives every scope in the plan one action.
 | Rename | Exists under another name with the same query | Yes |
 | Change Query | Exists under the same name with a different query | Yes, and needs a commit |
 | Rename And Change Query | Both. The planner does not propose this yet. The helper carries it out if a plan file lists it | Yes, and needs a commit |
-| Remove | Exists and the consultant marked it for removal | Yes |
+| Remove | Exists and the CSS marked it for removal | Yes |
 | Leave Alone | Exists below the parent, is not part of the plan, and is not touched | No |
 | By Hand | A change the tool will not make, with the reason | No |
 
 The rules:
 
 1. Nothing that touches an existing scope is approved by default. Each rename, query change, and removal has a tick box under "Changes To Existing Scopes". An item that is not ticked is skipped by the helper and listed as skipped. Unapproved items do not stop the build.
-2. The planner never proposes a removal. The consultant marks a left-alone scope for removal, and then approves it with a second tick.
+2. The planner never proposes a removal. The CSS marks a left-alone scope for removal, and then approves it with a second tick.
 3. A scope cannot be moved to a different parent. The update call in the Secure Workload API takes only the short name, the description, and the query. When a planned scope looks like one that already exists under a different parent, the plan creates a new one and raises a Review finding. Leave the old one, or mark it for removal.
 4. A top-level scope is never renamed, changed, or removed. Neither is the chosen parent or anything above it.
 5. A scope is removed only when every scope under it is also being removed and nothing is known to depend on it. Otherwise it becomes By Hand with the reason.
@@ -128,7 +128,7 @@ Matching a planned scope to the tenant, in this order:
 
 1. Same parent and same short name, ignoring capital letters. If the query is also the same, the scope is kept. If the query differs, a query change is proposed.
 2. Same parent and an equivalent query under a different name. A rename is proposed.
-3. Same short name or an equivalent query anywhere else in the scope list. This is not a match. A Review finding says "may already exist as" with the full name, and the consultant decides.
+3. Same short name or an equivalent query anywhere else in the scope list. This is not a match. A Review finding says "may already exist as" with the full name, and the CSS decides.
 
 Comparing two queries:
 
@@ -149,7 +149,7 @@ Use the same label names in every round for the same customer. With different na
 
 ## Label Names
 
-The plan labels each workload with four labels. The default names are Environment, Application, Location, and Zone. The planner page lets the consultant change any of them.
+The plan labels each workload with four labels. The default names are Environment, Application, Location, and Zone. The planner page lets the CSS change any of them.
 
 Change a name when the tenant already uses it for something else. The export file carries the tenant's existing label names, and the plan flags any name already in use. Keep a name only if it already means the same thing in that tenant.
 
@@ -248,7 +248,7 @@ Every part of the helper that can change a tenant follows these rules.
 5. Regulated zones are a label. They become a level only when a separate team owns policy for a zone.
 6. The tree stops at four levels below the parent scope. Cisco says to keep the tree shallow and gives no number. Four is this tool's own ceiling.
 7. Applications identified by subnet get a label file, so scope queries still use labels.
-8. A change to an existing scope is only ever proposed. Nothing is renamed, changed, or removed unless the consultant approves it in the plan and the customer allows it when building.
+8. A change to an existing scope is only ever proposed. Nothing is renamed, changed, or removed unless the CSS approves it in the plan and the customer allows it when building.
 9. A level the parent scope already stands for is not built again below it.
 10. Missing information does not stop the plan.
 
