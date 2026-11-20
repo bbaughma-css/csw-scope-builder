@@ -6,62 +6,94 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Secure Workload Scope Planning Questionnaire</title>
 <style>
-  :root { --ink:#1b1f24; --muted:#5a6470; --line:#d5dae0; --bg:#f5f7f9; --card:#ffffff; --accent:#0b5cad; --bad:#b3261e; --ok:#1b6e3c; }
+  :root { --ink:#1b1f24; --muted:#5a6470; --line:#d5dae0; --bg:#f5f7f9; --card:#ffffff; --accent:#0b5cad; --bad:#b3261e; --ok:#1b6e3c; --soft:#e8f1fb; }
   * { box-sizing:border-box; }
-  body { margin:0; font:16px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color:var(--ink); background:var(--bg); }
-  header, main { max-width:860px; margin:0 auto; padding:16px; }
-  h1 { font-size:1.5rem; margin:8px 0; }
-  h2 { font-size:1.15rem; margin:0 0 4px; }
-  p { margin:6px 0; }
-  .note { background:#e8f1fb; border:1px solid #b9d3ee; border-radius:8px; padding:10px 12px; }
-  section { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin:14px 0; }
-  .q { margin:14px 0 0; }
+  html, body { height:100%; }
+  body { margin:0; font:14px/1.35 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color:var(--ink); background:var(--bg); display:flex; flex-direction:column; }
+  header { padding:8px 16px; background:var(--card); border-bottom:1px solid var(--line); display:flex; flex-wrap:wrap; align-items:center; gap:4px 16px; }
+  header .title { flex:1 1 420px; min-width:0; }
+  h1 { font-size:1.15rem; margin:0; }
+  h1 .ver { font-size:.75rem; font-weight:400; color:var(--muted); margin-left:8px; white-space:nowrap; }
+  h2 { font-size:1rem; margin:0 0 2px; }
+  p { margin:3px 0; }
+  .note { background:var(--soft); border:1px solid #b9d3ee; border-radius:6px; padding:4px 8px; font-size:.85rem; }
+  .app { flex:1; display:flex; min-height:0; }
+  nav#tabs { flex:0 0 230px; padding:10px 8px; border-right:1px solid var(--line); background:var(--card); overflow-y:auto; }
+  nav#tabs button { font-size:.92rem; display:flex; justify-content:space-between; align-items:center; width:100%; text-align:left; border:0; border-radius:5px; padding:6px 8px; margin:1px 0; background:transparent; color:var(--ink); }
+  nav#tabs button[aria-current="step"] { background:var(--soft); color:var(--accent); font-weight:600; }
+  nav#tabs .bad { background:var(--bad); color:#fff; border-radius:9px; font-size:.72rem; padding:0 6px; font-weight:600; }
+  .pane { flex:1; min-width:0; overflow-y:auto; padding:12px 18px; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:10px 14px; display:grid; grid-template-columns:repeat(auto-fill, minmax(330px, 1fr)); gap:4px 22px; align-content:start; }
+  section.off { display:none; }
+  section > h2, section > p, section > [data-table], section > .actions, section > #paste-box, .q.wide { grid-column:1 / -1; }
+  .q { margin:6px 0 0; min-width:0; }
   .q > label.t, .q > .t { display:block; font-weight:600; }
-  .hint { color:var(--muted); font-size:.9rem; margin:2px 0 6px; }
-  input[type=text], input[type=email], input[type=number], select, textarea { width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:6px; font:inherit; background:#fff; color:var(--ink); }
-  textarea { min-height:90px; }
-  .opts label { display:block; padding:4px 0; font-weight:400; }
-  .opts input { margin-right:8px; }
-  button { font:inherit; padding:9px 14px; border-radius:6px; border:1px solid var(--accent); background:#fff; color:var(--accent); cursor:pointer; }
+  .hint { color:var(--muted); font-size:.8rem; margin:1px 0 3px; }
+  input[type=text], input[type=email], input[type=number], select, textarea { width:100%; padding:4px 7px; border:1px solid var(--line); border-radius:5px; font:inherit; background:#fff; color:var(--ink); }
+  textarea { min-height:52px; resize:vertical; }
+  .opts { display:flex; flex-wrap:wrap; gap:2px 16px; }
+  .opts label { padding:1px 0; font-weight:400; }
+  .opts input { margin-right:5px; }
+  button { font:inherit; padding:5px 11px; border-radius:5px; border:1px solid var(--accent); background:#fff; color:var(--accent); cursor:pointer; }
   button.primary { background:var(--accent); color:#fff; }
-  button.small { padding:4px 10px; font-size:.9rem; }
+  button.small { padding:2px 8px; font-size:.82rem; }
   button.danger { border-color:var(--bad); color:var(--bad); }
-  .chips { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0; }
-  .chip { background:#e9edf2; border-radius:14px; padding:3px 6px 3px 12px; display:inline-flex; align-items:center; gap:6px; }
-  .chip button { border:0; background:transparent; color:var(--muted); padding:0 6px; font-size:1.1rem; line-height:1; }
-  .addline { display:flex; gap:8px; }
+  button:disabled { opacity:.45; cursor:default; }
+  .chips { display:flex; flex-wrap:wrap; gap:4px; margin:4px 0; }
+  .chip { background:#e9edf2; border-radius:12px; padding:1px 4px 1px 10px; display:inline-flex; align-items:center; gap:4px; }
+  .chip button { border:0; background:transparent; color:var(--muted); padding:0 5px; font-size:1rem; line-height:1; }
+  .addline { display:flex; gap:6px; }
   .addline input { flex:1; }
-  .suggest { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
-  .row { border:1px solid var(--line); border-radius:8px; padding:10px; margin:8px 0; display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; background:#fbfcfd; }
-  .cell { flex:1 1 170px; min-width:0; }
-  .cell label { display:block; font-size:.85rem; color:var(--muted); }
-  .cell.check { flex:1 1 100%; }
-  .cell.check label { display:inline; font-size:1rem; color:var(--ink); }
-  #errors { background:#fdecea; border:1px solid #f1b5b0; color:var(--bad); border-radius:8px; padding:10px 14px; margin:14px 0; }
-  #errors ul { margin:6px 0 0 18px; padding:0; }
-  #status { color:var(--ok); font-weight:600; margin-top:10px; }
-  .actions { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+  .suggest { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+  .row { border-bottom:1px solid var(--line); padding:3px 0 4px; margin:0; display:flex; flex-wrap:wrap; gap:3px 8px; align-items:flex-end; }
+  .row:first-child { border-top:1px solid var(--line); margin-top:4px; }
+  @media (min-width:761px) { .row + .row .cell:not(.check) label { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; } }
+  [data-table] > button { margin-top:5px; }
+  .cell { flex:1 1 130px; min-width:0; }
+  .cell label { display:block; font-size:.75rem; color:var(--muted); }
+  .cell.check { flex:0 0 auto; align-self:center; }
+  .cell.check label { display:inline; font-size:.85rem; color:var(--ink); }
+  #errors { background:#fdecea; border:1px solid #f1b5b0; color:var(--bad); border-radius:6px; padding:6px 10px; margin:0 0 8px; }
+  #errors ul { margin:4px 0 0 18px; padding:0; columns:2 320px; column-gap:28px; }
+  #errors a { color:var(--bad); }
+  footer { display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; padding:7px 16px; background:var(--card); border-top:1px solid var(--line); }
+  footer .grow { flex:1; min-width:0; }
+  #status { color:var(--ok); font-weight:600; margin:0; font-size:.85rem; }
+  .actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
   [hidden] { display:none !important; }
-  @media print { button, .addline, .suggest, #paste-box { display:none !important; } body { background:#fff; } }
+  @media (max-width:760px) {
+    .app { flex-direction:column; }
+    nav#tabs { flex:0 0 auto; display:flex; overflow-x:auto; border-right:0; border-bottom:1px solid var(--line); padding:4px 6px; }
+    nav#tabs button { width:auto; white-space:nowrap; }
+    section { grid-template-columns:1fr; }
+  }
+  @media print {
+    html, body { height:auto; display:block; background:#fff; }
+    .app { display:block; }
+    .pane { overflow:visible; padding:0; }
+    nav#tabs, footer, button, .addline, .suggest, #paste-box { display:none !important; }
+    section, section.off { display:grid; break-inside:avoid; margin:0 0 8px; }
+  }
 </style>
 </head>
 <body>
 <header>
-  <h1>Secure Workload Scope Planning Questionnaire</h1>
-  <p>Your answers are used to design the scope tree for your Cisco Secure Workload tenant. A scope is a named group of workloads, and the scope tree is how those groups are arranged.</p>
-  <p>Answer what you know and leave out what you do not. The scope tree can be built in rounds: send what you have now, then add to your saved answers later and send them again.</p>
-  <p class="note">This page works offline. Nothing you type is sent anywhere. Your answers stay on this computer until you save the answers file and send it to your Cisco contact.</p>
-  <div class="actions" style="margin-top:12px">
-    <button type="button" id="load-btn">Continue From A Saved File</button>
-    <input type="file" id="load-file" accept=".json,application/json" hidden>
+  <div class="title">
+    <h1>Secure Workload Scope Planning Questionnaire<span class="ver" id="tool-version">CSW Scope Builder version 1.2</span></h1>
   </div>
+  <p class="note">Works offline. Nothing you type is sent anywhere until you email the saved file.</p>
+  <button type="button" id="load-btn">Continue From A Saved File</button>
+  <input type="file" id="load-file" accept=".json,application/json" hidden>
 </header>
 
-<main>
+<div class="app">
+<nav id="tabs" aria-label="Sections"></nav>
+<main class="pane" id="pane">
   <div id="errors" role="alert" hidden></div>
 
   <section>
     <h2>1. Your Organization</h2>
+    <p class="hint">Your answers are used to design the scope tree for your Cisco Secure Workload tenant. A scope is a named group of workloads, and the scope tree is how those groups are arranged. Answer what you know and leave out what you do not. The tree can be built in rounds: send what you have now, then add to your saved answers later and send them again.</p>
     <div class="q"><label class="t" for="c-name">Organization name</label>
       <input type="text" id="c-name" data-path="customer.name" autocomplete="organization"></div>
     <div class="q"><label class="t" for="c-contact">Your name</label>
@@ -96,7 +128,7 @@
         <label><input type="radio" name="tenant.existing_tree" data-path="tenant.existing_tree" data-type="bool" value="true">Yes, scopes already exist</label>
       </div>
       <p class="note" data-show-if="tenant.existing_tree=true">Your Cisco contact will send a small read-only program that saves your current scope list to a file. Send that file back together with this one.</p></div>
-    <div class="q" data-show-if="tenant.existing_tree=true"><label class="t" for="t-under">Which existing scope should the new scopes go under?</label>
+    <div class="q wide" data-show-if="tenant.existing_tree=true"><label class="t" for="t-under">Which existing scope should the new scopes go under?</label>
       <p class="hint">Give the full scope name as Secure Workload shows it, with colons between levels, for example Company:Internal:Lab. New scopes are added below it and nothing else is touched. Leave this blank if you are not sure, and your Cisco contact will choose it with you.</p>
       <input type="text" id="t-under" data-path="tenant.build_under" placeholder="Company:Internal:Lab"></div>
     <div class="q"><span class="t">Do any of your applications run on Kubernetes or OpenShift?</span>
@@ -127,7 +159,7 @@
         <label><input type="checkbox" data-set="label_sources.fields" value="owner">Who owns it</label>
         <label><input type="checkbox" data-set="label_sources.fields" value="location">Where it runs (site or cloud)</label>
       </div></div>
-    <div class="q"><label class="t" for="ls-notes">Anything else about your records (optional)</label>
+    <div class="q wide"><label class="t" for="ls-notes">Anything else about your records (optional)</label>
       <textarea id="ls-notes" data-path="label_sources.notes"></textarea></div>
   </section>
 
@@ -136,10 +168,10 @@
     <div class="q"><span class="t">Environments</span>
       <p class="hint">Environments become the first level of the scope tree. Every server should belong to exactly one.</p>
       <div data-list="structure.environments" data-noun="environment" data-suggest="Production|Non-Production|Development|Test|Staging|Disaster Recovery"></div></div>
-    <div class="q"><span class="t">Sites And Clouds</span>
+    <div class="q wide"><span class="t">Sites And Clouds</span>
       <p class="hint">List each data center and each cloud you run servers in.</p>
       <div data-table="structure.locations"></div></div>
-    <div class="q"><span class="t">Shared Services</span>
+    <div class="q wide"><span class="t">Shared Services</span>
       <p class="hint">Services that many applications depend on. Each one gets its own scope so one policy can cover access to it. Add the addresses if you know them. If you do not, leave them blank and add them in a later round.</p>
       <div data-table="structure.shared_services"></div></div>
   </section>
@@ -164,7 +196,7 @@
         <label><input type="radio" name="access.separate_teams" data-path="access.separate_teams" data-type="bool" value="false">No, one team manages all of it</label>
         <label><input type="radio" name="access.separate_teams" data-path="access.separate_teams" data-type="bool" value="true">Yes, more than one team</label>
       </div></div>
-    <div class="q" data-show-if="access.separate_teams=true"><span class="t">Teams</span>
+    <div class="q wide" data-show-if="access.separate_teams=true"><span class="t">Teams</span>
       <p class="hint">How responsibility is divided decides whether the scope tree needs an extra level for it.</p>
       <div data-table="access.teams"></div></div>
   </section>
@@ -177,23 +209,26 @@
         <label><input type="radio" name="compliance.has_zones" data-path="compliance.has_zones" data-type="bool" value="false">No</label>
         <label><input type="radio" name="compliance.has_zones" data-path="compliance.has_zones" data-type="bool" value="true">Yes</label>
       </div></div>
-    <div class="q" data-show-if="compliance.has_zones=true"><span class="t">Zones</span>
+    <div class="q wide" data-show-if="compliance.has_zones=true"><span class="t">Zones</span>
       <p class="hint">After adding zones here, go back to section 5 and choose the zone for each application you know belongs to one.</p>
       <div data-table="compliance.zones"></div></div>
   </section>
 
   <section>
     <h2>8. Save Your Answers</h2>
-    <p>Save Progress keeps a file you can continue from later. Finish And Save checks your answers and produces the file to send to your Cisco contact.</p>
+    <p>Save Progress keeps a file you can continue from later. Finish And Save checks your answers and produces the file to send to your Cisco contact. Both buttons are in the bar at the bottom of every section.</p>
     <p>For a later round, open this page, choose Continue From A Saved File, add what you have learned, answer Yes to the question about existing scopes, and use Finish And Save again.</p>
-    <div class="actions">
-      <button type="button" id="save-draft">Save Progress</button>
-      <button type="button" id="save-final" class="primary">Finish And Save</button>
-    </div>
-    <p id="status" role="status" hidden></p>
   </section>
-  <p class="hint" id="tool-version">CSW Scope Builder version 1.2</p>
 </main>
+</div>
+
+<footer>
+  <button type="button" id="tab-back">Back</button>
+  <button type="button" id="tab-next">Next</button>
+  <div class="grow"><p id="status" role="status" hidden></p></div>
+  <button type="button" id="save-draft">Save Progress</button>
+  <button type="button" id="save-final" class="primary">Finish And Save</button>
+</footer>
 
 <script>
 (function () {
@@ -604,10 +639,63 @@
     if (!list.length) { box.hidden = true; return; }
     box.appendChild(el('strong', null, 'Please fix ' + list.length + (list.length === 1 ? ' item' : ' items') + ' before finishing.'));
     var ul = el('ul');
-    list.forEach(function (m) { ul.appendChild(el('li', null, m)); });
+    list.forEach(function (m) {
+      var li = el('li');
+      var n = sectionOf(m);
+      if (n) {
+        var a = el('a', null, m); a.href = '#';
+        a.addEventListener('click', function (ev) { ev.preventDefault(); showTab(n - 1); });
+        li.appendChild(a);
+      } else { li.textContent = m; }
+      ul.appendChild(li);
+    });
     box.appendChild(ul);
     box.hidden = false;
-    if (box.scrollIntoView) { box.scrollIntoView(); }
+    markTabs(list);
+    var pane = document.getElementById('pane');
+    if (pane) { pane.scrollTop = 0; }
+  }
+
+  /* ---------- one section at a time ---------- */
+  var current = 0;
+  function sections() { return Array.prototype.slice.call(document.querySelectorAll('main section')); }
+  function sectionOf(message) { var m = /^Section (\d+):/.exec(String(message)); return m ? Number(m[1]) : 0; }
+  function showTab(i) {
+    var all = sections();
+    if (!all.length) { return; }
+    current = Math.max(0, Math.min(all.length - 1, i));
+    all.forEach(function (sec, k) { sec.classList.toggle('off', k !== current); });
+    Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b, k) {
+      if (k === current) { b.setAttribute('aria-current', 'step'); } else { b.removeAttribute('aria-current'); }
+    });
+    var back = document.getElementById('tab-back'), next = document.getElementById('tab-next');
+    if (back) { back.disabled = current === 0; }
+    if (next) { next.disabled = current === all.length - 1; }
+    var pane = document.getElementById('pane');
+    if (pane) { pane.scrollTop = 0; }
+  }
+  function markTabs(list) {
+    var counts = {};
+    (list || []).forEach(function (m) { var n = sectionOf(m); if (n) { counts[n] = (counts[n] || 0) + 1; } });
+    Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b, k) {
+      var badge = b.querySelector('.bad');
+      if (badge) { b.removeChild(badge); }
+      if (counts[k + 1]) { var s2 = el('span', 'bad', String(counts[k + 1])); s2.title = counts[k + 1] + ' to fix'; b.appendChild(s2); }
+    });
+  }
+  function setupTabs() {
+    var nav = document.getElementById('tabs');
+    if (!nav) { return; }
+    nav.textContent = '';
+    sections().forEach(function (sec, k) {
+      var h = sec.querySelector('h2');
+      var b = el('button', null, h ? h.textContent : 'Section ' + (k + 1)); b.type = 'button';
+      b.addEventListener('click', function () { showTab(k); });
+      nav.appendChild(b);
+    });
+    document.getElementById('tab-back').addEventListener('click', function () { showTab(current - 1); });
+    document.getElementById('tab-next').addEventListener('click', function () { showTab(current + 1); });
+    showTab(0);
   }
 
   /* ---------- save and load ---------- */
@@ -669,6 +757,7 @@
   function init() {
     bindScalars();
     renderAll();
+    setupTabs();
 
     document.getElementById('paste-add').addEventListener('click', function () {
       var ta = document.getElementById('paste');
@@ -689,6 +778,7 @@
       fr.onload = function () {
         var msg = loadText(String(fr.result));
         showErrors(msg ? [msg] : []);
+        if (!msg) { showTab(0); }
         lf.value = '';
       };
       fr.readAsText(lf.files[0]);
@@ -706,7 +796,8 @@
     buildOutput: buildOutput,
     TOOL_VERSION: TOOL_VERSION,
     fileName: fileName,
-    renderAll: renderAll
+    renderAll: renderAll,
+    showTab: showTab
   };
 
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); } else { init(); }

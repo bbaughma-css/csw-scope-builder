@@ -2,17 +2,97 @@
 
 Version 1.2 | 19 Nov 2026 | Supersedes: 1.1
 
-CSW Scope Builder turns a customer's answers about their environment into a Cisco Secure Workload (CSW) scope tree that follows Cisco's scope design principles. It produces a plan document, a label file, and a plan file. It can create the scopes in the customer's tenant under a parent scope the customer chooses. From version 1.2 it can also rename an existing scope, change its query, or remove it, but only for changes the CSS approves in the plan and the customer allows when building.
+CSW Scope Builder turns a customer's answers about their environment into a Cisco Secure Workload (CSW) scope tree that follows Cisco's scope design principles. It produces a plan document, a label file, and a plan file. It can create the scopes in the customer's tenant under a parent scope the customer chooses. From version 1.2 it can also rename an existing scope, change its query, or remove it, but only for changes the consultant approves in the plan and the customer allows when building.
 
 A scope is a named group of workloads defined by a query. The scope tree is how those groups are arranged, and it is the anchor for policy and for access control.
+
+## Quick Start: Running The Helper
+
+This is the short version for the person who runs `csw_scope_helper.py` against the tenant. Every command only previews unless it ends in `--write`. The rest of this README has the detail.
+
+### Before You Start
+
+| You need | How to check or get it |
+|---|---|
+| Python 3.8 or later | Run `python3 --version`. On Windows run `py --version` |
+| The helper file | Save `csw_scope_helper.py` in a folder of its own. Nothing else has to be installed |
+| Your tenant address | For example `https://example.tetrationcloud.com` |
+| A Secure Workload API key and secret | A pair of short values: the key is 32 characters and the secret is 40. The key needs the capability `user_role_scope_management`. Create it with Cisco's current directions. The long Security Cloud Control token that starts with `eyJ` does not work |
+| The full name of the scope to build under | For example `Acme:Production`. Copy it from Organize > Scopes and Inventory |
+| The files from your Cisco contact | The plan file (ends in `CSW Scope Plan.json`) and the label file (ends in `CSW Labels.csv`). Save both in the same folder as the helper. You get these after step 1 |
+
+Open a terminal in that folder:
+
+```
+cd "path to the folder"
+```
+
+Each command asks for the tenant address, the key, and the secret. They are never saved. On Windows, type `py` in place of `python3` in every command below. Replace the file names and the scope name with your own.
+
+### Step 1: Save Your Scope List (Only If The Tenant Already Has Scopes)
+
+```
+python3 csw_scope_helper.py export --under "Acme:Production"
+```
+
+It saves a file that ends in `CSW Existing Scopes.json`. Send that file to your Cisco contact. They send back the plan document, the label file, and the plan file. Leave out `--under` and the scope name to save the whole tenant.
+
+### Step 2: Check The Label File, Then Upload It
+
+```
+python3 csw_scope_helper.py check-labels --labels "2026-11-19 Acme - CSW Labels.csv"
+```
+
+It changes nothing and lists every value an upload would replace. Then upload the file yourself in Secure Workload under Organize > Label Management > User Defined Label Upload, with the Merge operation. The helper does not upload labels.
+
+### Step 3: Preview The Plan
+
+```
+python3 csw_scope_helper.py apply --plan "2026-11-19 Acme - CSW Scope Plan.json" --under "Acme:Production"
+```
+
+It lists everything the plan would do and changes nothing. Read the list.
+
+### Step 4: Build
+
+The same command with `--write` on the end:
+
+```
+python3 csw_scope_helper.py apply --plan "2026-11-19 Acme - CSW Scope Plan.json" --under "Acme:Production" --write
+```
+
+Type yes when asked. It creates each scope, reads it back, and saves a record file that ends in `CSW Apply Record.json`. Keep that file.
+
+### Step 5: Only If The Plan Changes Existing Scopes
+
+The plan document lists these under "Changes To Existing Scopes". Step 4 never touches them. To make the approved renames, query changes, and removals:
+
+```
+python3 csw_scope_helper.py apply --plan "2026-11-19 Acme - CSW Scope Plan.json" --under "Acme:Production" --write --allow-changes --allow-removals
+```
+
+It lists each change, before and after, and waits for you to type yes. Leave off `--allow-removals` to rename and change queries only. Add `--no-commit` to make the changes and commit them yourself in Secure Workload after you have looked at them.
+
+### If You Need To Reverse A Build
+
+Preview the reversal, then run it:
+
+```
+python3 csw_scope_helper.py undo --record "2026-11-19 081200 Production - CSW Apply Record.json"
+python3 csw_scope_helper.py undo --record "2026-11-19 081200 Production - CSW Apply Record.json" --write
+```
+
+### If Something Stops Partway
+
+Run the same command again. It reads the tenant first and does only what is missing.
 
 ## What Is In This Repository
 
 | File | Who uses it | What it is |
 |---|---|---|
-| `index.html` | CSS | Start page with the workflow and links to everything else |
+| `index.html` | Consultant | Start page with the workflow and links to everything else |
 | `interview.html` | Customer | Questionnaire. Works offline and sends nothing anywhere. Saves an answers file |
-| `planner.html` | CSS | Reads the answers file and builds the plan. Runs entirely in the browser |
+| `planner.html` | Consultant | Reads the answers file and builds the plan. Runs entirely in the browser |
 | `csw_scope_helper.py` | Customer | Python program that reads the tenant's scopes, checks labels, creates scopes, makes approved changes to existing scopes, and undoes a run |
 | `customer-guide.html` | Customer | One page of instructions to send with the questionnaire and the helper |
 | `tests/` | Maintainer | Automated tests for all three pieces and the shared rule tables (`rules.json`) |
@@ -32,15 +112,15 @@ A page or the helper refuses a file in a newer format than it understands and sa
 
 ## How It Works
 
-1. The CSS emails the customer `interview.html`, `csw_scope_helper.py`, and `customer-guide.html`.
+1. The consultant emails the customer `interview.html`, `csw_scope_helper.py`, and `customer-guide.html`.
 2. The customer fills out the questionnaire and sends back the answers file.
 3. If the tenant already has scopes, the customer runs the helper's `export` command and sends back the scope list file.
-4. The CSS opens `planner.html`, loads the files, and gets the plan. The CSS sends the customer the plan document (PDF), the label file, and the plan file.
+4. The consultant opens `planner.html`, loads the files, and gets the plan. The consultant sends the customer the plan document (PDF), the label file, and the plan file.
 5. The customer checks and uploads the label file, then creates the scopes with the helper's `apply` command or by hand.
 
-The CSS never needs a login or an API key for the customer's tenant. The customer reads from the tenant in step 3 and writes to it in step 5.
+The consultant never needs a login or an API key for the customer's tenant. The customer reads from the tenant in step 3 and writes to it in step 5.
 
-## What The CSS Does
+## What The Consultant Does
 
 1. Send the three customer files.
 2. When the answers file arrives, open `planner.html` in a browser.
@@ -60,7 +140,7 @@ The plan has nine sections: summary, findings, scope tree, changes to existing s
 | Finding type | Meaning |
 |---|---|
 | Blocker | Stops the build. The label file cannot be downloaded and the helper refuses the plan file |
-| Review | Needs a decision from the CSS or the customer |
+| Review | Needs a decision from the consultant or the customer |
 | Later Round | Information is missing. It does not stop this round |
 
 ## Building Under Any Scope
@@ -87,14 +167,14 @@ Version 1.2 gives every scope in the plan one action.
 | Rename | Exists under another name with the same query | Yes |
 | Change Query | Exists under the same name with a different query | Yes, and needs a commit |
 | Rename And Change Query | Both. The planner does not propose this yet. The helper carries it out if a plan file lists it | Yes, and needs a commit |
-| Remove | Exists and the CSS marked it for removal | Yes |
+| Remove | Exists and the consultant marked it for removal | Yes |
 | Leave Alone | Exists below the parent, is not part of the plan, and is not touched | No |
 | By Hand | A change the tool will not make, with the reason | No |
 
 The rules:
 
 1. Nothing that touches an existing scope is approved by default. Each rename, query change, and removal has a tick box under "Changes To Existing Scopes". An item that is not ticked is skipped by the helper and listed as skipped. Unapproved items do not stop the build.
-2. The planner never proposes a removal. The CSS marks a left-alone scope for removal, and then approves it with a second tick.
+2. The planner never proposes a removal. The consultant marks a left-alone scope for removal, and then approves it with a second tick.
 3. A scope cannot be moved to a different parent. The update call in the Secure Workload API takes only the short name, the description, and the query. When a planned scope looks like one that already exists under a different parent, the plan creates a new one and raises a Review finding. Leave the old one, or mark it for removal.
 4. A top-level scope is never renamed, changed, or removed. Neither is the chosen parent or anything above it.
 5. A scope is removed only when every scope under it is also being removed and nothing is known to depend on it. Otherwise it becomes By Hand with the reason.
@@ -128,7 +208,7 @@ Matching a planned scope to the tenant, in this order:
 
 1. Same parent and same short name, ignoring capital letters. If the query is also the same, the scope is kept. If the query differs, a query change is proposed.
 2. Same parent and an equivalent query under a different name. A rename is proposed.
-3. Same short name or an equivalent query anywhere else in the scope list. This is not a match. A Review finding says "may already exist as" with the full name, and the CSS decides.
+3. Same short name or an equivalent query anywhere else in the scope list. This is not a match. A Review finding says "may already exist as" with the full name, and the consultant decides.
 
 Comparing two queries:
 
@@ -149,7 +229,7 @@ Use the same label names in every round for the same customer. With different na
 
 ## Label Names
 
-The plan labels each workload with four labels. The default names are Environment, Application, Location, and Zone. The planner page lets the CSS change any of them.
+The plan labels each workload with four labels. The default names are Environment, Application, Location, and Zone. The planner page lets the consultant change any of them.
 
 Change a name when the tenant already uses it for something else. The export file carries the tenant's existing label names, and the plan flags any name already in use. Keep a name only if it already means the same thing in that tenant.
 
@@ -248,7 +328,7 @@ Every part of the helper that can change a tenant follows these rules.
 5. Regulated zones are a label. They become a level only when a separate team owns policy for a zone.
 6. The tree stops at four levels below the parent scope. Cisco says to keep the tree shallow and gives no number. Four is this tool's own ceiling.
 7. Applications identified by subnet get a label file, so scope queries still use labels.
-8. A change to an existing scope is only ever proposed. Nothing is renamed, changed, or removed unless the CSS approves it in the plan and the customer allows it when building.
+8. A change to an existing scope is only ever proposed. Nothing is renamed, changed, or removed unless the consultant approves it in the plan and the customer allows it when building.
 9. A level the parent scope already stands for is not built again below it.
 10. Missing information does not stop the plan.
 
@@ -312,4 +392,4 @@ No certificate or private key is kept in this repository. The `--ca-file` test m
 - Label keys and values are not case sensitive, release 3.10: https://securitydocs.cisco.com/docs/csw/3-10/user/91627.dita
 - Label keys and values are not case sensitive, release 4.0 SaaS: https://www.cisco.com/c/en/us/td/docs/security/workload_security/secure_workload/user-guide/4_0/cisco-secure-workload-user-guide-saas-v40/m-inventory.html
 
-Ctrl+F keywords: scope tree, scope design principles, build under, parent scope stands for, anchor, capital letters, changes to existing scopes, rename, change query, remove, approve, allow-changes, allow-removals, no-commit, attempting, by hand, in use, depends on, may already exist as, find-created, interrupted build, commit timeout, ca-file, label names, label file, check-labels, merge, apply, undo, record file, later round, blocker, configuration limits.
+Ctrl+F keywords: quick start, before you start, full commands, export, check-labels, apply, write, undo, scope tree, scope design principles, build under, parent scope stands for, anchor, capital letters, changes to existing scopes, rename, change query, remove, approve, allow-changes, allow-removals, no-commit, attempting, by hand, in use, depends on, may already exist as, find-created, interrupted build, commit timeout, ca-file, label names, label file, check-labels, merge, apply, undo, record file, later round, blocker, configuration limits.
